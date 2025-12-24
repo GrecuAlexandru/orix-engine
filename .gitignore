@@ -1,0 +1,75 @@
+# Build directories
+build/
+bin/
+out/
+x64/
+x86/
+
+# vcpkg
+vcpkg_installed/
+.cache/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CMakeSettings.json
+CMakeUserPresets.json
+generated/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.sln
+*.vcxproj
+*.filters
+*.aps
+*.ncb
+*.opendb
+*.sdf
+*.cache
+*.pch
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.map
+*.res
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.rsp
+*.pgc
+*.pgd
+*.meta
+*.tlog
+
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Operating System
+.DS_Store
+Thumbs.db
+
+# Generic Build Artifacts (mostly caught by build/ but for safety)
+*.exe
+*.dll
+*.lib
+*.so
+*.a
+*.pyd
+*.pyc
+
+# Allow specific binaries in external if they are vendored
+!external/**/*.lib
+!external/**/*.dll
+!external/**/*.so
+!external/**/*.a
+
+# Steamworks/App specific
+steam_appid.txt
