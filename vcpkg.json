@@ -1,7 +1,14 @@
 {
-    "name": "orix-engine",
-    "version": "0.1.0",
-    "dependencies": [
-        "sdl2"
-    ]
+	"name": "orix-engine",
+	"version": "0.1.0",
+	"dependencies": [
+		"sdl2",
+		"glad",
+		{
+			"name": "imgui",
+			"features": [
+				"opengl3-binding"
+			]
+		}
+	]
 }

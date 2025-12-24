@@ -33,7 +33,7 @@ cmake --build build --config Release
 Before running, ensure **Steam** is open. Create a `steam_appid.txt` file in the same directory as the executable with the content `480` (SpaceWar test ID), or run it directly:
 
 ```powershell
-./build/Release/BlockGame.exe
+./build/Release/orix-engine.exe
 ```
 
 ---
