@@ -1,4 +1,4 @@
-#include "Input.hpp"
+#include "core/Input.hpp"
 
 const uint8_t *Input::m_KeyboardState = nullptr;
 uint8_t Input::m_PrevKeyboardState[SDL_NUM_SCANCODES] = {0};
@@ -7,14 +7,17 @@ uint32_t Input::m_PrevMouseState = 0;
 glm::vec2 Input::m_MouseDelta = glm::vec2(0.0f);
 
 void Input::Update() {
-    // Store previous state logic
+    // Get current keyboard state first
+    const uint8_t *currentKeyboardState = SDL_GetKeyboardState(NULL);
+
+    // Store previous state (copy from the previous current state)
     if (m_KeyboardState) {
         memcpy(m_PrevKeyboardState, m_KeyboardState, SDL_NUM_SCANCODES);
     }
-    m_PrevMouseState = m_MouseState;
 
-    // Get current keyboard state
-    m_KeyboardState = SDL_GetKeyboardState(NULL);
+    // Update to new current state
+    m_KeyboardState = currentKeyboardState;
+    m_PrevMouseState = m_MouseState;
 
     // Get mouse state and position
     int x, y;

@@ -1,5 +1,5 @@
-#include "Camera.hpp"
-#include "Input.hpp"
+#include "core/Camera.hpp"
+#include "core/Input.hpp"
 
 Camera::Camera()
     : Position(glm::vec3(0.0f, 0.0f, 3.0f)),

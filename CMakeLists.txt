@@ -8,12 +8,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(STEAMWORKS_DIR ${CMAKE_SOURCE_DIR}/external/steamworks/sdk)
 
 # ---- Executable ----
+# Note: src/renderer/Shader.cpp is included here, fixing your "unresolved external" error
 add_executable(orix-engine
     src/main.cpp
-	src/core/Camera.cpp
+	src/core/Application.cpp
+    src/core/Camera.cpp
     src/core/Input.cpp
+    src/renderer/Shader.cpp
     src/platform/Steam.cpp
-	external/imgui/imgui_impl_sdl2.cpp
+    external/imgui/imgui_impl_sdl2.cpp
 )
 
 # ---- Find packages from vcpkg ----
@@ -25,9 +28,9 @@ find_package(glm CONFIG REQUIRED)
 # ---- Includes ----
 target_include_directories(orix-engine PRIVATE
     ${STEAMWORKS_DIR}/public
-	include
-	external/imgui
-	src
+    include
+    external/imgui
+    src
 )
 
 # ---- Link libraries ----
@@ -35,15 +38,25 @@ target_link_libraries(orix-engine PRIVATE
     SDL2::SDL2
     SDL2::SDL2main
     glad::glad
-	imgui::imgui
-	glm::glm
+    imgui::imgui
+    glm::glm
     opengl32
     ${STEAMWORKS_DIR}/redistributable_bin/win64/steam_api64.lib
 )
 
-# ---- Copy Steam DLL ----
+# ---- POST-BUILD: Copy Steam DLL ----
 add_custom_command(TARGET orix-engine POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
     ${STEAMWORKS_DIR}/redistributable_bin/win64/steam_api64.dll
     $<TARGET_FILE_DIR:orix-engine>
+)
+
+# ---- POST-BUILD: Copy Shaders Folder ----
+# This ensures your .vert and .frag files are in the build directory
+# every time you compile the project.
+add_custom_command(TARGET orix-engine POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    "${CMAKE_CURRENT_SOURCE_DIR}/shaders"
+    "$<TARGET_FILE_DIR:orix-engine>/shaders"
+    COMMENT "Copying shaders to build directory..."
 )

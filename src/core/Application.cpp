@@ -1,0 +1,154 @@
+#include "core/Application.hpp"
+#include "core/Input.hpp"
+#include "platform/Steam.hpp"
+#include "renderer/Mesh.hpp"
+
+#include "imgui.h"
+#include "imgui_impl_opengl3.h"
+#include "imgui_impl_sdl2.h"
+
+#include <glm/gtc/type_ptr.hpp>
+#include <iostream>
+
+Application::Application()
+    : m_Window(nullptr), m_GLContext(nullptr), m_Running(true),
+      m_IsMouseLocked(false), m_LastFrame(0.0f), m_VAO(0), m_VBO(0) {}
+
+Application::~Application() { Cleanup(); }
+
+bool Application::Initialize() {
+    if (!Steam::Init())
+        return false;
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0)
+        return false;
+
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+                        SDL_GL_CONTEXT_PROFILE_CORE);
+
+    m_Window =
+        SDL_CreateWindow("Orix Engine", SDL_WINDOWPOS_CENTERED,
+                         SDL_WINDOWPOS_CENTERED, m_WindowWidth, m_WindowHeight,
+                         SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    m_GLContext = SDL_GL_CreateContext(m_Window);
+
+    if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress))
+        return false;
+
+    // ImGui Init
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui_ImplSDL2_InitForOpenGL(m_Window, m_GLContext);
+    ImGui_ImplOpenGL3_Init("#version 450");
+
+    glEnable(GL_DEPTH_TEST);
+    Input::SetCursorLock(m_IsMouseLocked);
+
+    // Load Shaders
+    m_BasicShader =
+        std::make_unique<Shader>("shaders/basic.vert", "shaders/basic.frag");
+
+    // Setup Cube
+    glGenVertexArrays(1, &m_VAO);
+    glGenBuffers(1, &m_VBO);
+    glBindVertexArray(m_VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices,
+                 GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float),
+                          (void *)0);
+    glEnableVertexAttribArray(0);
+
+    return true;
+}
+
+int Application::Run() {
+    if (!Initialize())
+        return -1;
+
+    while (m_Running) {
+        float currentFrame = SDL_GetTicks() / 1000.0f;
+        float deltaTime = currentFrame - m_LastFrame;
+        m_LastFrame = currentFrame;
+
+        ProcessEvents();
+        Update(deltaTime);
+        Render();
+    }
+
+    return 0;
+}
+
+void Application::ProcessEvents() {
+    // Update input BEFORE processing events to capture previous frame state
+    Input::Update();
+
+    SDL_Event e;
+    while (SDL_PollEvent(&e)) {
+        ImGui_ImplSDL2_ProcessEvent(&e);
+        if (e.type == SDL_QUIT)
+            m_Running = false;
+    }
+
+    if (Input::IsKeyPressed(SDL_SCANCODE_ESCAPE)) {
+        m_IsMouseLocked = !m_IsMouseLocked;
+        Input::SetCursorLock(m_IsMouseLocked);
+    }
+
+    if (Input::IsMouseButtonPressed(SDL_BUTTON_LEFT) && !m_IsMouseLocked) {
+        if (!ImGui::GetIO().WantCaptureMouse) {
+            m_IsMouseLocked = true;
+            Input::SetCursorLock(m_IsMouseLocked);
+        }
+    }
+}
+
+void Application::Update(float deltaTime) {
+    if (m_IsMouseLocked) {
+        m_Camera.Update(deltaTime);
+    }
+}
+
+void Application::Render() {
+    glClearColor(0.5f, 0.8f, 1.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    m_BasicShader->Use();
+    glm::mat4 model = glm::mat4(1.0f);
+    glm::mat4 view = m_Camera.GetViewMatrix();
+    glm::mat4 projection = m_Camera.GetProjectionMatrix((float)m_WindowWidth,
+                                                        (float)m_WindowHeight);
+    m_BasicShader->SetMat4("u_MVP", projection * view * model);
+
+    glBindVertexArray(m_VAO);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+
+    // UI
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
+    ImGui::NewFrame();
+
+    ImGui::Begin("Debug", nullptr,
+                 ImGuiWindowFlags_AlwaysAutoResize |
+                     ImGuiWindowFlags_NoBackground);
+    ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+    ImGui::End();
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    SDL_GL_SwapWindow(m_Window);
+}
+
+void Application::Cleanup() {
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
+    glDeleteVertexArrays(1, &m_VAO);
+    glDeleteBuffers(1, &m_VBO);
+    SDL_GL_DeleteContext(m_GLContext);
+    SDL_DestroyWindow(m_Window);
+    SDL_Quit();
+    Steam::Shutdown();
+}
