@@ -8,14 +8,20 @@
 #include <imgui.h>
 #include <imgui_impl_opengl3.h>
 
+#include "Camera.hpp"
+#include "Input.hpp"
 #include "platform/Steam.hpp"
+#include "renderer/Mesh.hpp"
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 const char *vertexShaderSource = R"(
 	#version 450 core
 	layout (location = 0) in vec3 aPos;
+	uniform mat4 u_MVP;
 	void main()
 	{
-		gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+		gl_Position = u_MVP * vec4(aPos, 1.0);
 	}
 )";
 
@@ -59,6 +65,9 @@ int main(int argc, char **argv) {
     ImGui_ImplSDL2_InitForOpenGL(window, glContext);
     ImGui_ImplOpenGL3_Init("#version 450");
 
+    // Enable Depth Testing
+    glEnable(GL_DEPTH_TEST);
+
     // Compile Shaders (Basic Boilerplate)
     unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
@@ -76,21 +85,23 @@ int main(int argc, char **argv) {
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
-    float vertices[] = {-0.5f, -0.5f, 0.0f, 0.5f, -0.5f,
-                        0.0f,  0.0f,  0.5f, 0.0f};
-
     // Setup VAO and VBO
     unsigned int VBO, VAO;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
-
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices,
+                 GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float),
                           (void *)0);
     glEnableVertexAttribArray(0);
+
+    Camera camera;
+    float deltaTime = 0.0f;
+    float lastFrame = 0.0f;
+    bool isMouseLocked = true;
+    Input::SetCursorLock(isMouseLocked);
 
     // Timing variables
     uint32_t lastTime = SDL_GetTicks();
@@ -99,6 +110,13 @@ int main(int argc, char **argv) {
 
     bool running = true;
     while (running) {
+        Input::Update();
+
+        // Calculate DeltaTime
+        float currentFrame = SDL_GetTicks() / 1000.0f;
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
             ImGui_ImplSDL2_ProcessEvent(&e);
@@ -106,39 +124,57 @@ int main(int argc, char **argv) {
                 running = false;
         }
 
-        // Calculate FPS
-        uint32_t currentTime = SDL_GetTicks();
-        frameCount++;
-
-        if (currentTime - lastTime >= 1000) {
-            fps = (float)frameCount;
-            frameCount = 0;
-            lastTime = currentTime;
+        if (Input::IsKeyPressed(SDL_SCANCODE_ESCAPE)) {
+            if (isMouseLocked) {
+                isMouseLocked = false;
+                Input::SetCursorLock(isMouseLocked);
+            } else {
+                running = false;
+            }
         }
 
-        // Start IMGUI Frame
+        // Input Logic
+        if (Input::IsMouseButtonPressed(SDL_BUTTON_LEFT) && !isMouseLocked) {
+            isMouseLocked = true;
+            Input::SetCursorLock(isMouseLocked);
+        }
+
+        if (isMouseLocked) {
+            camera.Update(deltaTime);
+        }
+
+        // ---- RENDER START ----
+        glClearColor(0.5f, 0.8f, 1.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        glUseProgram(shaderProgram);
+
+        glm::mat4 model = glm::mat4(1.0f);
+        glm::mat4 view = camera.GetViewMatrix();
+        glm::mat4 projection = camera.GetProjectionMatrix(1280.0f, 720.0f);
+        glm::mat4 mvp = projection * view * model;
+
+        // Send matrix to shader
+        int mvpLoc = glGetUniformLocation(shaderProgram, "u_MVP");
+        glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, glm::value_ptr(mvp));
+
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLES, 0, 36); // Draw 36 vertices (the cube)
+
+        // ImGui Rendering
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
 
-        // Create transparent overlay in the top right
-        ImGui::SetNextWindowPos(ImVec2(1280 - 10, 10), ImGuiCond_Always,
-                                ImVec2(1, 0));
-        ImGui::Begin("Overlay", nullptr,
-                     ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs |
-                         ImGuiWindowFlags_AlwaysAutoResize |
+        ImGui::SetNextWindowPos(ImVec2(10, 10));
+        ImGui::Begin("Debug", nullptr,
+                     ImGuiWindowFlags_AlwaysAutoResize |
                          ImGuiWindowFlags_NoBackground);
-        ImGui::TextColored(ImVec4(1, 1, 1, 1), "FPS: %.1f", fps);
+        ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+        ImGui::Text("Pos: %.1f, %.1f, %.1f", camera.Position.x,
+                    camera.Position.y, camera.Position.z);
         ImGui::End();
 
-        glClearColor(0.5f, 0.8f, 1.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        glUseProgram(shaderProgram);
-        glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
-
-        // Render IMGUI on top
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

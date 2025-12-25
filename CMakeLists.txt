@@ -10,18 +10,23 @@ set(STEAMWORKS_DIR ${CMAKE_SOURCE_DIR}/external/steamworks/sdk)
 # ---- Executable ----
 add_executable(orix-engine
     src/main.cpp
+	src/core/Camera.cpp
+    src/core/Input.cpp
     src/platform/Steam.cpp
-	src/imgui_impl_sdl2.cpp
+	external/imgui/imgui_impl_sdl2.cpp
 )
 
 # ---- Find packages from vcpkg ----
 find_package(SDL2 CONFIG REQUIRED)
 find_package(glad CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
+find_package(glm CONFIG REQUIRED)
 
 # ---- Includes ----
 target_include_directories(orix-engine PRIVATE
     ${STEAMWORKS_DIR}/public
+	include
+	external/imgui
 	src
 )
 
@@ -31,6 +36,7 @@ target_link_libraries(orix-engine PRIVATE
     SDL2::SDL2main
     glad::glad
 	imgui::imgui
+	glm::glm
     opengl32
     ${STEAMWORKS_DIR}/redistributable_bin/win64/steam_api64.lib
 )

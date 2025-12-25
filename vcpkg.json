@@ -4,6 +4,7 @@
 	"dependencies": [
 		"sdl2",
 		"glad",
+		"glm",
 		{
 			"name": "imgui",
 			"features": [
