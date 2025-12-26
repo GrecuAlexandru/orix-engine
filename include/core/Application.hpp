@@ -4,7 +4,7 @@
 #include <SDL.h>
 #include <memory>
 
-#include "Camera.hpp"
+#include "game/Player.hpp"
 #include "game/World.hpp"
 #include "renderer/Shader.hpp"
 
@@ -29,7 +29,7 @@ class Application {
     bool m_IsMouseLocked;
 
     // Camera
-    Camera m_Camera;
+    Player m_Player;
     float m_LastFrame;
 
     // Rendering Resources

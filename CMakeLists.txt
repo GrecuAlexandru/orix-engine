@@ -15,6 +15,7 @@ add_executable(orix-engine
     src/core/Camera.cpp
     src/core/Input.cpp
     src/game/Chunk.cpp
+    src/game/Player.cpp
     src/renderer/Shader.cpp
 	src/game/World.cpp
     src/platform/Steam.cpp

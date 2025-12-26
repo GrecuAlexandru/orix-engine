@@ -101,8 +101,12 @@ void Application::ProcessEvents() {
 }
 
 void Application::Update(float deltaTime) {
+    // Always update player physics and camera position
+    m_Player.Update(deltaTime, m_World);
+
+    // Only allow camera rotation when mouse is locked
     if (m_IsMouseLocked) {
-        m_Camera.Update(deltaTime);
+        m_Player.UpdateCameraRotation(deltaTime);
     }
 }
 
@@ -111,7 +115,8 @@ void Application::Render() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Render World
-    m_World.Render(*m_BasicShader, m_Camera, m_WindowWidth, m_WindowHeight);
+    m_World.Render(
+        *m_BasicShader, m_Player.GetCamera(), m_WindowWidth, m_WindowHeight);
 
     // UI
     ImGui_ImplOpenGL3_NewFrame();
@@ -124,9 +129,26 @@ void Application::Render() {
                      ImGuiWindowFlags_NoBackground);
     ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
     ImGui::Text("Position: %.1f, %.1f, %.1f",
-                m_Camera.GetPosition().x,
-                m_Camera.GetPosition().y,
-                m_Camera.GetPosition().z);
+                m_Player.GetCamera().GetPosition().x,
+                m_Player.GetCamera().GetPosition().y,
+                m_Player.GetCamera().GetPosition().z);
+    // Draw Crosshair
+    ImDrawList* drawList = ImGui::GetBackgroundDrawList();
+    ImVec2 center = ImVec2(m_WindowWidth / 2.0f, m_WindowHeight / 2.0f);
+    float lineSize = 10.0f;
+    float thickness = 2.0f;
+    ImU32 white = IM_COL32(255, 255, 255, 255);
+
+    // Horizontal line
+    drawList->AddLine(ImVec2(center.x - lineSize, center.y),
+                      ImVec2(center.x + lineSize, center.y),
+                      white,
+                      thickness);
+    // Vertical line
+    drawList->AddLine(ImVec2(center.x, center.y - lineSize),
+                      ImVec2(center.x, center.y + lineSize),
+                      white,
+                      thickness);
     ImGui::End();
 
     ImGui::Render();

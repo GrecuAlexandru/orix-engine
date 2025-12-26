@@ -2,9 +2,9 @@
 #include "core/Input.hpp"
 
 Camera::Camera()
-    : Position(glm::vec3(7.0f, 9.0f, 22.0f)),
-      WorldUp(glm::vec3(0.0f, 1.0f, 0.0f)), Yaw(-90.0f), Pitch(0.0f),
-      MovementSpeed(2.5f), MouseSensitivity(0.1f), Zoom(45.0f) {
+    : Position(glm::vec3(0.0f)), WorldUp(glm::vec3(0.0f, 1.0f, 0.0f)),
+      Yaw(-90.0f), Pitch(0.0f), MovementSpeed(2.5f), MouseSensitivity(0.1f),
+      Zoom(45.0f) {
     updateCameraVectors();
 }
 

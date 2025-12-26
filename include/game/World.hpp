@@ -26,6 +26,7 @@ class World {
     void Init();
     void Update(float deltaTime);
     void Render(Shader& shader, const Camera& camera, int width, int height);
+    Block GetBlockAt(int x, int y, int z);
 
   private:
     std::map<glm::ivec3, Chunk*, IVec3Compare> m_Chunks;
