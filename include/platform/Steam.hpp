@@ -1,57 +1,54 @@
 #pragma once
 
+#include "game/network/NetworkPackets.hpp"
 #include <steam/steam_api.h>
 #include <glm/glm.hpp>
-#include <iostream>
 #include <map>
-#include <vector>
+#include <string>
 
 class Steam {
   public:
+    // === Initialization ===
     static bool Init();
     static void Update();
     static void Shutdown();
 
+    // === Lobby Management ===
     static void CreateLobby();
     static void FindLobbies();
     static void JoinLobby(CSteamID lobbyId);
-
-    static std::string GetUserName(CSteamID userSteamID);
     static CSteamID GetCurrentLobbyID();
+    static std::string GetUserName(CSteamID userSteamID);
 
+    // === Networking ===
     static void SendPosition(glm::vec3 pos, glm::vec3 direction);
     static void ReceivePackets();
     static void InterpolatePlayers(float deltaTime);
     static int GetPing(uint64_t targetID);
-    static int GetAndResetPacketCount(); // For tickrate calculation
+    static int GetAndResetPacketCount();
 
-    struct RemotePlayerData {
-        glm::vec3 currentPos; // Where we are currently rendering
-        glm::vec3 targetPos;  // Where the last packet said the player is
-        glm::vec3 direction;
-    };
-    static std::map<uint64_t, RemotePlayerData> RemotePlayers;
+    // === Remote Player Data ===
+    inline static std::map<uint64_t, RemotePlayerData> RemotePlayers;
 
   private:
-  private:
-    Steam(); // Private constructor for singleton
+    // Singleton for callbacks
+    Steam();
     ~Steam();
-
     static Steam* GetInstance();
-    static Steam* s_Instance;
+    inline static Steam* s_Instance = nullptr;
 
-    void OnLobbyCreatedInternal(LobbyCreated_t* pCallback, bool bIOFailure);
-    void OnLobbyMatchListInternal(LobbyMatchList_t* pCallback, bool bIOFailure);
-    void OnLobbyEnteredInternal(LobbyEnter_t* pCallback, bool bIOFailure);
-
+    // Lobby callbacks
     static void OnLobbyCreated(LobbyCreated_t* pCallback, bool bIOFailure);
     static void OnLobbyMatchList(LobbyMatchList_t* pCallback, bool bIOFailure);
     static void OnLobbyEntered(LobbyEnter_t* pCallback, bool bIOFailure);
-
     STEAM_CALLBACK(Steam, OnLobbyChatUpdate, LobbyChatUpdate_t);
 
-    static SteamAPICall_t m_LobbyCreateCall;
-    static SteamAPICall_t m_LobbyMatchListCall;
-    static SteamAPICall_t m_LobbyEnterCall;
-    static CSteamID m_CurrentLobbyID;
+    // State
+    inline static SteamAPICall_t m_LobbyCreateCall = k_uAPICallInvalid;
+    inline static SteamAPICall_t m_LobbyMatchListCall = k_uAPICallInvalid;
+    inline static SteamAPICall_t m_LobbyEnterCall = k_uAPICallInvalid;
+    inline static CSteamID m_CurrentLobbyID;
+
+    // Static packet counter for tickrate calculation
+    inline static int s_PacketsReceivedThisSecond = 0;
 };

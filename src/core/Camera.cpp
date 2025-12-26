@@ -21,31 +21,11 @@ glm::vec3 Camera::GetPosition() const {
 }
 
 void Camera::Update(float deltaTime) {
-    // 1. Handle Keyboard Movement
-    float velocity = MovementSpeed * deltaTime;
-
-    if (Input::IsKeyDown(SDL_SCANCODE_W))
-        Position += Front * velocity;
-    if (Input::IsKeyDown(SDL_SCANCODE_S))
-        Position -= Front * velocity;
-    if (Input::IsKeyDown(SDL_SCANCODE_A))
-        Position -= Right * velocity;
-    if (Input::IsKeyDown(SDL_SCANCODE_D))
-        Position += Right * velocity;
-
-    // Vertical movement (Minecraft style flying)
-    if (Input::IsKeyDown(SDL_SCANCODE_E))
-        Position += WorldUp * velocity;
-    if (Input::IsKeyDown(SDL_SCANCODE_Q))
-        Position -= WorldUp * velocity;
-
-    // 2. Handle Mouse Rotation
+    // Handle Mouse Rotation
     glm::vec2 mouseDelta = Input::GetMouseDelta();
 
     Yaw += mouseDelta.x * MouseSensitivity;
-    Pitch -=
-        mouseDelta.y *
-        MouseSensitivity; // Reversed since y-coordinates go from bottom to top
+    Pitch -= mouseDelta.y * MouseSensitivity;
 
     // Constrain Pitch so the screen doesn't flip
     if (Pitch > 89.0f)

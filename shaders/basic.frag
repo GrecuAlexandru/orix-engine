@@ -13,7 +13,6 @@ void main() {
     // 1.0 if we are in the border, 0.0 if we are in the block center
     float isBorder = 1.0 - step(borderSize, edgeDist);
 
-    // Choose color based on block type
     // BlockType: Air=0, Grass=1, Dirt=2, Stone=3
     vec3 blockColor;
     if (vBlockID < 1.5) {

@@ -1,16 +1,7 @@
 #include "platform/Steam.hpp"
 #include "game/network/NetworkPackets.hpp"
+#include <iostream>
 #include "steam/steamnetworkingtypes.h"
-
-Steam* Steam::s_Instance = nullptr;
-SteamAPICall_t Steam::m_LobbyCreateCall = k_uAPICallInvalid;
-SteamAPICall_t Steam::m_LobbyMatchListCall = k_uAPICallInvalid;
-SteamAPICall_t Steam::m_LobbyEnterCall = k_uAPICallInvalid;
-CSteamID Steam::m_CurrentLobbyID;
-std::map<uint64_t, Steam::RemotePlayerData> Steam::RemotePlayers;
-
-// Static packet counter for tickrate calculation
-static int s_PacketsReceivedThisSecond = 0;
 
 Steam::Steam() {
     // Constructor - STEAM_CALLBACK macro handles initialization automatically

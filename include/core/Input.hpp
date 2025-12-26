@@ -19,9 +19,9 @@ class Input {
     static void SetCursorLock(bool locked);
 
   private:
-    static const uint8_t *m_KeyboardState;
-    static uint8_t m_PrevKeyboardState[SDL_NUM_SCANCODES];
-    static uint32_t m_MouseState;
-    static uint32_t m_PrevMouseState;
-    static glm::vec2 m_MouseDelta;
+    inline static const uint8_t* m_KeyboardState = nullptr;
+    inline static uint8_t m_PrevKeyboardState[SDL_NUM_SCANCODES];
+    inline static uint32_t m_MouseState = 0;
+    inline static uint32_t m_PrevMouseState = 0;
+    inline static glm::vec2 m_MouseDelta = glm::vec2(0.0f);
 };

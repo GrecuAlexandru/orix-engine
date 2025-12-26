@@ -20,6 +20,7 @@ class Application {
     void ProcessEvents();
     void Update(float deltaTime);
     void Render();
+    void RenderUI();
     void Cleanup();
 
     // Windowing
@@ -27,10 +28,6 @@ class Application {
     SDL_GLContext m_GLContext;
     bool m_Running;
     bool m_IsMouseLocked;
-
-    // Camera
-    Player m_Player;
-    float m_LastFrame;
 
     // Rendering Resources
     std::unique_ptr<Shader> m_BasicShader;
@@ -41,6 +38,10 @@ class Application {
 
     // World
     World m_World;
+
+    // Player
+    Player m_Player;
+    float m_LastFrame;
 
     // Steam lobby ID input
     char m_LobbyIdInput[64] = "";

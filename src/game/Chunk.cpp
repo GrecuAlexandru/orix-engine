@@ -44,40 +44,40 @@ void Chunk::GenerateMesh() {
     for (int x = 0; x < CHUNK_SIZE; x++) {
         for (int y = 0; y < CHUNK_SIZE; y++) {
             for (int z = 0; z < CHUNK_SIZE; z++) {
-                if (m_Blocks[x][y][z].id == BlockType::Air)
+                if (m_Blocks[x][y][z].type == BlockType::Air)
                     continue;
 
                 glm::vec3 pos(x, y, z);
-                float blockID = static_cast<float>(m_Blocks[x][y][z].id);
+                float blockType = static_cast<float>(m_Blocks[x][y][z].type);
 
                 // Face culling
 
                 // 0: Back (-Z)
-                if (z == 0 || m_Blocks[x][y][z - 1].id == BlockType::Air)
-                    addFace(vertices, pos, 0, blockID);
+                if (z == 0 || m_Blocks[x][y][z - 1].type == BlockType::Air)
+                    addFace(vertices, pos, 0, blockType);
 
                 // 1: Front (+Z)
                 if (z == CHUNK_SIZE - 1 ||
-                    m_Blocks[x][y][z + 1].id == BlockType::Air)
-                    addFace(vertices, pos, 1, blockID);
+                    m_Blocks[x][y][z + 1].type == BlockType::Air)
+                    addFace(vertices, pos, 1, blockType);
 
                 // 2: Left (-X)
-                if (x == 0 || m_Blocks[x - 1][y][z].id == BlockType::Air)
-                    addFace(vertices, pos, 2, blockID);
+                if (x == 0 || m_Blocks[x - 1][y][z].type == BlockType::Air)
+                    addFace(vertices, pos, 2, blockType);
 
                 // 3: Right (+X)
                 if (x == CHUNK_SIZE - 1 ||
-                    m_Blocks[x + 1][y][z].id == BlockType::Air)
-                    addFace(vertices, pos, 3, blockID);
+                    m_Blocks[x + 1][y][z].type == BlockType::Air)
+                    addFace(vertices, pos, 3, blockType);
 
                 // 4: Bottom (-Y)
-                if (y == 0 || m_Blocks[x][y - 1][z].id == BlockType::Air)
-                    addFace(vertices, pos, 4, blockID);
+                if (y == 0 || m_Blocks[x][y - 1][z].type == BlockType::Air)
+                    addFace(vertices, pos, 4, blockType);
 
                 // 5: Top (+Y)
                 if (y == CHUNK_SIZE - 1 ||
-                    m_Blocks[x][y + 1][z].id == BlockType::Air)
-                    addFace(vertices, pos, 5, blockID);
+                    m_Blocks[x][y + 1][z].type == BlockType::Air)
+                    addFace(vertices, pos, 5, blockType);
             }
         }
     }
@@ -136,7 +136,7 @@ void Chunk::Render(Shader& shader) {
 void Chunk::addFace(std::vector<float>& vertices,
                     glm::vec3 p,
                     int face,
-                    float blockID) {
+                    float blockType) {
     // clang-format off
     // Face data: 6 vertices per face, 5 floats per vertex (Pos X,Y,Z, U,V)
     // Each face is 2 triangles = 6 vertices
@@ -198,7 +198,7 @@ void Chunk::addFace(std::vector<float>& vertices,
         vertices.push_back(faceData[face][i + 2] + p.z); // Z position
         vertices.push_back(faceData[face][i + 3]);       // U coord
         vertices.push_back(faceData[face][i + 4]);       // V coord
-        vertices.push_back(blockID);                     // Block ID
+        vertices.push_back(blockType);                   // Block Type
     }
 }
 

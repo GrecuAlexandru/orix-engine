@@ -27,5 +27,5 @@ class Chunk {
     void addFace(std::vector<float>& vertices,
                  glm::vec3 pos,
                  int faceIndex,
-                 float blockID);
+                 float blockType);
 };

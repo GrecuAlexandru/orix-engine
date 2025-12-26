@@ -70,7 +70,7 @@ int Application::Run() {
 
         ProcessEvents();
         Update(deltaTime);
-        Steam::Update(); // Process Steam callbacks
+        Steam::Update();
         Render();
     }
 
@@ -109,12 +109,10 @@ void Application::Update(float deltaTime) {
     // Always update player physics and camera position
     m_Player.Update(deltaTime, m_World);
 
-    // Only allow camera rotation when mouse is locked
     if (m_IsMouseLocked) {
         m_Player.UpdateCameraRotation(deltaTime);
     }
 
-    // Network Timer - Send position at 30Hz
     static float networkTimer = 0.0f;
     const float tickInterval = 1.0f / 30.0f; // 30Hz
 
@@ -133,11 +131,18 @@ void Application::Render() {
     m_World.Render(
         *m_BasicShader, m_Player.GetCamera(), m_WindowWidth, m_WindowHeight);
 
-    // UI
+    // Render UI
+    RenderUI();
+
+    SDL_GL_SwapWindow(m_Window);
+}
+
+void Application::RenderUI() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
+    // Debug Window
     ImGui::Begin("Debug",
                  nullptr,
                  ImGuiWindowFlags_AlwaysAutoResize |
@@ -158,10 +163,8 @@ void Application::Render() {
         Steam::FindLobbies();
     }
 
-    // Lobby ID input and join
     ImGui::Separator();
 
-    // Show current lobby ID if in a lobby
     CSteamID currentLobby = Steam::GetCurrentLobbyID();
     if (currentLobby.IsValid()) {
         ImGui::Text("Current Lobby ID: %llu", currentLobby.ConvertToUint64());
@@ -176,7 +179,6 @@ void Application::Render() {
     ImGui::SameLine();
     if (ImGui::Button("Join")) {
         if (strlen(m_LobbyIdInput) > 0) {
-            // Convert string to uint64
             uint64 lobbyId = std::stoull(m_LobbyIdInput);
             CSteamID steamLobbyId(lobbyId);
             Steam::JoinLobby(steamLobbyId);
@@ -186,19 +188,18 @@ void Application::Render() {
     if (!m_IsMouseLocked) {
         ImGui::Text("Press ESC to return to game");
     }
-    // Draw Crosshair
+
+    // Crosshair
     ImDrawList* drawList = ImGui::GetBackgroundDrawList();
     ImVec2 center = ImVec2(m_WindowWidth / 2.0f, m_WindowHeight / 2.0f);
     float lineSize = 10.0f;
     float thickness = 2.0f;
     ImU32 white = IM_COL32(255, 255, 255, 255);
 
-    // Horizontal line
     drawList->AddLine(ImVec2(center.x - lineSize, center.y),
                       ImVec2(center.x + lineSize, center.y),
                       white,
                       thickness);
-    // Vertical line
     drawList->AddLine(ImVec2(center.x, center.y - lineSize),
                       ImVec2(center.x, center.y + lineSize),
                       white,
@@ -211,7 +212,6 @@ void Application::Render() {
     static float timer = 0;
     static int displayTickrate = 0;
 
-    // Tickrate Calculation (Packets per second)
     timer += ImGui::GetIO().DeltaTime;
     if (timer >= 1.0f) {
         displayTickrate = Steam::GetAndResetPacketCount();
@@ -230,8 +230,6 @@ void Application::Render() {
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-    SDL_GL_SwapWindow(m_Window);
 }
 
 void Application::Cleanup() {

@@ -9,12 +9,12 @@ enum class BlockType : uint8_t {
 };
 
 struct Block {
-    BlockType id;
+    BlockType type;
 
-    Block() : id(BlockType::Air) {}
-    Block(BlockType type) : id(type) {}
+    Block() : type(BlockType::Air) {}
+    Block(BlockType t) : type(t) {}
 
     bool IsActive() const {
-        return id != BlockType::Air;
+        return type != BlockType::Air;
     }
 };

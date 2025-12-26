@@ -42,7 +42,7 @@ void World::Render(Shader& shader,
         chunk->Render(shader);
     }
 
-    // Render remote players as red cubes
+    // Render remote players
     for (auto const& [id, data] : Steam::RemotePlayers) {
         // 1. Draw the Player Body (Cube) - using smooth interpolated position
         glm::mat4 model = glm::translate(glm::mat4(1.0f), data.currentPos);

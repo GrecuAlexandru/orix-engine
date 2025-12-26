@@ -6,13 +6,10 @@ Player::Player() {
 
 void Player::Update(float deltaTime, World& world) {
     HandleMovement(deltaTime, world);
-
-    // Always update camera position to match player
     m_Camera.Position = Position + glm::vec3(0.0f, Height, 0.0f);
 }
 
 void Player::UpdateCameraRotation(float deltaTime) {
-    // Only update camera rotation (mouse look)
     m_Camera.Update(deltaTime);
 }
 
@@ -63,7 +60,7 @@ void Player::HandleMovement(float deltaTime, World& world) {
     int bz = (int)floor(nextPos.z);
 
     // Check the block at our feet
-    if (world.GetBlockAt(bx, by, bz).id != BlockType::Air) {
+    if (world.GetBlockAt(bx, by, bz).type != BlockType::Air) {
         // We hit the ground!
         Velocity.y = 0;
         IsGrounded = true;

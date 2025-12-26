@@ -1,4 +1,8 @@
 #include "renderer/Shader.hpp"
+#include <fstream>
+#include <iostream>
+#include <sstream>
+
 
 Shader::Shader(const char* vertexPath, const char* fragmentPath) {
     // Retrive the source code from file path

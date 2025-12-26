@@ -1,14 +1,8 @@
 #include "core/Input.hpp"
 
-const uint8_t *Input::m_KeyboardState = nullptr;
-uint8_t Input::m_PrevKeyboardState[SDL_NUM_SCANCODES] = {0};
-uint32_t Input::m_MouseState = 0;
-uint32_t Input::m_PrevMouseState = 0;
-glm::vec2 Input::m_MouseDelta = glm::vec2(0.0f);
-
 void Input::Update() {
     // Get current keyboard state first
-    const uint8_t *currentKeyboardState = SDL_GetKeyboardState(NULL);
+    const uint8_t* currentKeyboardState = SDL_GetKeyboardState(NULL);
 
     // Store previous state (copy from the previous current state)
     if (m_KeyboardState) {
@@ -43,7 +37,9 @@ bool Input::IsMouseButtonPressed(uint8_t button) {
            ((m_PrevMouseState & SDL_BUTTON(button)) == 0);
 }
 
-glm::vec2 Input::GetMouseDelta() { return m_MouseDelta; }
+glm::vec2 Input::GetMouseDelta() {
+    return m_MouseDelta;
+}
 
 void Input::SetCursorLock(bool locked) {
     SDL_SetRelativeMouseMode(locked ? SDL_TRUE : SDL_FALSE);
