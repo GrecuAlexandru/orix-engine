@@ -1,4 +1,5 @@
 #include "game/World.hpp"
+#include "platform/Steam.hpp"
 #include "renderer/Mesh.hpp"
 #include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -16,6 +17,8 @@ void World::Init() {
             m_Chunks[chunkPos] = newChunk;
         }
     }
+
+    InitPlayerCube();
 }
 
 void World::Update(float deltaTime) {
@@ -38,6 +41,29 @@ void World::Render(Shader& shader,
     for (auto const& [pos, chunk] : m_Chunks) {
         chunk->Render(shader);
     }
+
+    // Render remote players as red cubes
+    for (auto const& [id, data] : Steam::RemotePlayers) {
+        // 1. Draw the Player Body (Cube) - using smooth interpolated position
+        glm::mat4 model = glm::translate(glm::mat4(1.0f), data.currentPos);
+        // Scale to player size (roughly 2 blocks tall, 1 block wide)
+        model = glm::scale(model, glm::vec3(0.8f, 1.8f, 0.8f));
+        shader.SetMat4("u_Model", model);
+
+        glBindVertexArray(m_PlayerCubeVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        // 2. Draw a "Direction Indicator" (A smaller cube in front of the face)
+        glm::vec3 indicatorPos = data.currentPos + (data.direction * 0.4f);
+        glm::mat4 indicatorModel =
+            glm::translate(glm::mat4(1.0f), indicatorPos);
+        indicatorModel =
+            glm::scale(indicatorModel, glm::vec3(0.3f)); // Make it smaller
+
+        shader.SetMat4("u_Model", indicatorModel);
+        glBindVertexArray(m_PlayerCubeVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
 }
 
 Block World::GetBlockAt(int x, int y, int z) {
@@ -59,4 +85,136 @@ Block World::GetBlockAt(int x, int y, int z) {
     }
 
     return Block(BlockType::Air); // If chunk doesn't exist, it's air
+}
+
+void World::InitPlayerCube() {
+    // Simple cube vertices (position only, 36 vertices for 6 faces)
+    float vertices[] = {// Back face
+                        -0.5f,
+                        -0.5f,
+                        -0.5f,
+                        0.5f,
+                        -0.5f,
+                        -0.5f,
+                        0.5f,
+                        0.5f,
+                        -0.5f,
+                        0.5f,
+                        0.5f,
+                        -0.5f,
+                        -0.5f,
+                        0.5f,
+                        -0.5f,
+                        -0.5f,
+                        -0.5f,
+                        -0.5f,
+                        // Front face
+                        -0.5f,
+                        -0.5f,
+                        0.5f,
+                        0.5f,
+                        -0.5f,
+                        0.5f,
+                        0.5f,
+                        0.5f,
+                        0.5f,
+                        0.5f,
+                        0.5f,
+                        0.5f,
+                        -0.5f,
+                        0.5f,
+                        0.5f,
+                        -0.5f,
+                        -0.5f,
+                        0.5f,
+                        // Left face
+                        -0.5f,
+                        0.5f,
+                        0.5f,
+                        -0.5f,
+                        0.5f,
+                        -0.5f,
+                        -0.5f,
+                        -0.5f,
+                        -0.5f,
+                        -0.5f,
+                        -0.5f,
+                        -0.5f,
+                        -0.5f,
+                        -0.5f,
+                        0.5f,
+                        -0.5f,
+                        0.5f,
+                        0.5f,
+                        // Right face
+                        0.5f,
+                        0.5f,
+                        0.5f,
+                        0.5f,
+                        0.5f,
+                        -0.5f,
+                        0.5f,
+                        -0.5f,
+                        -0.5f,
+                        0.5f,
+                        -0.5f,
+                        -0.5f,
+                        0.5f,
+                        -0.5f,
+                        0.5f,
+                        0.5f,
+                        0.5f,
+                        0.5f,
+                        // Bottom face
+                        -0.5f,
+                        -0.5f,
+                        -0.5f,
+                        0.5f,
+                        -0.5f,
+                        -0.5f,
+                        0.5f,
+                        -0.5f,
+                        0.5f,
+                        0.5f,
+                        -0.5f,
+                        0.5f,
+                        -0.5f,
+                        -0.5f,
+                        0.5f,
+                        -0.5f,
+                        -0.5f,
+                        -0.5f,
+                        // Top face
+                        -0.5f,
+                        0.5f,
+                        -0.5f,
+                        0.5f,
+                        0.5f,
+                        -0.5f,
+                        0.5f,
+                        0.5f,
+                        0.5f,
+                        0.5f,
+                        0.5f,
+                        0.5f,
+                        -0.5f,
+                        0.5f,
+                        0.5f,
+                        -0.5f,
+                        0.5f,
+                        -0.5f};
+
+    glGenVertexArrays(1, &m_PlayerCubeVAO);
+    glGenBuffers(1, &m_PlayerCubeVBO);
+
+    glBindVertexArray(m_PlayerCubeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, m_PlayerCubeVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    // Position attribute (location 0)
+    glVertexAttribPointer(
+        0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glBindVertexArray(0);
 }

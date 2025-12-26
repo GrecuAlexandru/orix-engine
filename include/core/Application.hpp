@@ -36,8 +36,8 @@ class Application {
     std::unique_ptr<Shader> m_BasicShader;
 
     // Window Constants
-    const int m_WindowWidth = 1280;
-    const int m_WindowHeight = 720;
+    const int m_WindowWidth = 1280 / 2;
+    const int m_WindowHeight = 720 / 2;
 
     // World
     World m_World;

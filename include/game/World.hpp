@@ -30,4 +30,9 @@ class World {
 
   private:
     std::map<glm::ivec3, Chunk*, IVec3Compare> m_Chunks;
+
+    // Player cube mesh for rendering remote players
+    unsigned int m_PlayerCubeVAO = 0;
+    unsigned int m_PlayerCubeVBO = 0;
+    void InitPlayerCube();
 };

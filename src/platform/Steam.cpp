@@ -1,10 +1,16 @@
 #include "platform/Steam.hpp"
+#include "game/network/NetworkPackets.hpp"
+#include "steam/steamnetworkingtypes.h"
 
 Steam* Steam::s_Instance = nullptr;
 SteamAPICall_t Steam::m_LobbyCreateCall = k_uAPICallInvalid;
 SteamAPICall_t Steam::m_LobbyMatchListCall = k_uAPICallInvalid;
 SteamAPICall_t Steam::m_LobbyEnterCall = k_uAPICallInvalid;
 CSteamID Steam::m_CurrentLobbyID;
+std::map<uint64_t, Steam::RemotePlayerData> Steam::RemotePlayers;
+
+// Static packet counter for tickrate calculation
+static int s_PacketsReceivedThisSecond = 0;
 
 Steam::Steam() {
     // Constructor - STEAM_CALLBACK macro handles initialization automatically
@@ -171,6 +177,96 @@ void Steam::OnLobbyChatUpdate(LobbyChatUpdate_t* pCallback) {
         std::cout << "[Network] " << userName << " lost connection."
                   << std::endl;
     }
+}
+
+void Steam::SendPosition(glm::vec3 pos, glm::vec3 direction) {
+    if (!m_CurrentLobbyID.IsValid())
+        return;
+
+    PlayerPositionPacket packet;
+    packet.steamID = SteamUser()->GetSteamID().ConvertToUint64();
+    packet.x = pos.x;
+    packet.y = pos.y;
+    packet.z = pos.z;
+    packet.dirX = direction.x;
+    packet.dirY = direction.y;
+    packet.dirZ = direction.z;
+
+    int numMembers = SteamMatchmaking()->GetNumLobbyMembers(m_CurrentLobbyID);
+    for (int i = 0; i < numMembers; i++) {
+        CSteamID target =
+            SteamMatchmaking()->GetLobbyMemberByIndex(m_CurrentLobbyID, i);
+        if (target == SteamUser()->GetSteamID())
+            continue; // Don't send to ourselves
+
+        SteamNetworkingIdentity identity;
+        identity.SetSteamID(target);
+
+        SteamNetworkingMessages()->SendMessageToUser(
+            identity,
+            &packet,
+            sizeof(packet),
+            k_nSteamNetworkingSend_Unreliable,
+            0);
+    }
+}
+
+void Steam::ReceivePackets() {
+    SteamNetworkingMessage_t* pIncomingMsg = nullptr;
+    while (SteamNetworkingMessages()->ReceiveMessagesOnChannel(
+               0, &pIncomingMsg, 1) > 0) {
+        if (pIncomingMsg) {
+            PacketType* type = (PacketType*)pIncomingMsg->m_pData;
+            if (*type == PacketType::PlayerPosition) {
+                PlayerPositionPacket* p =
+                    (PlayerPositionPacket*)pIncomingMsg->m_pData;
+
+                // Initialize currentPos if this is a new player
+                if (RemotePlayers.find(p->steamID) == RemotePlayers.end()) {
+                    RemotePlayers[p->steamID].currentPos =
+                        glm::vec3(p->x, p->y, p->z);
+                }
+
+                // Update the TARGET position, not the current position
+                RemotePlayers[p->steamID].targetPos =
+                    glm::vec3(p->x, p->y, p->z);
+                RemotePlayers[p->steamID].direction =
+                    glm::vec3(p->dirX, p->dirY, p->dirZ);
+
+                // Increment packet counter for tickrate calculation
+                s_PacketsReceivedThisSecond++;
+            }
+            pIncomingMsg->Release();
+        }
+    }
+}
+
+int Steam::GetAndResetPacketCount() {
+    int count = s_PacketsReceivedThisSecond;
+    s_PacketsReceivedThisSecond = 0;
+    return count;
+}
+
+void Steam::InterpolatePlayers(float deltaTime) {
+    // 10.0f is the "Smoothing Factor". Higher = faster response, Lower =
+    // smoother but laggier.
+    float lerpFactor = 10.0f * deltaTime;
+
+    for (auto& [id, data] : RemotePlayers) {
+        // Move currentPos slightly toward targetPos
+        data.currentPos = glm::mix(data.currentPos, data.targetPos, lerpFactor);
+    }
+}
+
+int Steam::GetPing(uint64_t targetID) {
+    SteamNetConnectionRealTimeStatus_t status;
+
+    SteamNetworkingIdentity identity;
+    identity.SetSteamID(CSteamID(targetID));
+
+    SteamNetworkingMessages()->GetSessionConnectionInfo(
+        identity, nullptr, &status);
+    return status.m_nPing;
 }
 
 CSteamID Steam::GetCurrentLobbyID() {

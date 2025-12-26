@@ -102,12 +102,26 @@ void Application::ProcessEvents() {
 }
 
 void Application::Update(float deltaTime) {
+    // Receive network packets and interpolate remote players
+    Steam::ReceivePackets();
+    Steam::InterpolatePlayers(deltaTime);
+
     // Always update player physics and camera position
     m_Player.Update(deltaTime, m_World);
 
     // Only allow camera rotation when mouse is locked
     if (m_IsMouseLocked) {
         m_Player.UpdateCameraRotation(deltaTime);
+    }
+
+    // Network Timer - Send position at 30Hz
+    static float networkTimer = 0.0f;
+    const float tickInterval = 1.0f / 30.0f; // 30Hz
+
+    networkTimer += deltaTime;
+    if (networkTimer >= tickInterval) {
+        Steam::SendPosition(m_Player.Position, m_Player.GetCamera().Front);
+        networkTimer = 0.0f;
     }
 }
 
@@ -189,6 +203,29 @@ void Application::Render() {
                       ImVec2(center.x, center.y + lineSize),
                       white,
                       thickness);
+    ImGui::End();
+
+    // Network Debug Window
+    ImGui::Begin("Network Debug");
+
+    static float timer = 0;
+    static int displayTickrate = 0;
+
+    // Tickrate Calculation (Packets per second)
+    timer += ImGui::GetIO().DeltaTime;
+    if (timer >= 1.0f) {
+        displayTickrate = Steam::GetAndResetPacketCount();
+        timer = 0;
+    }
+
+    ImGui::Text("Incoming Tickrate: %d Hz", displayTickrate);
+    ImGui::Separator();
+
+    for (auto const& [id, data] : Steam::RemotePlayers) {
+        int ping = Steam::GetPing(id);
+        ImGui::Text("Player [%llu]: Ping %dms", id, ping);
+    }
+
     ImGui::End();
 
     ImGui::Render();

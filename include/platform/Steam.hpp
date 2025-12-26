@@ -1,7 +1,10 @@
 #pragma once
 
 #include <steam/steam_api.h>
+#include <glm/glm.hpp>
 #include <iostream>
+#include <map>
+#include <vector>
 
 class Steam {
   public:
@@ -16,6 +19,20 @@ class Steam {
     static std::string GetUserName(CSteamID userSteamID);
     static CSteamID GetCurrentLobbyID();
 
+    static void SendPosition(glm::vec3 pos, glm::vec3 direction);
+    static void ReceivePackets();
+    static void InterpolatePlayers(float deltaTime);
+    static int GetPing(uint64_t targetID);
+    static int GetAndResetPacketCount(); // For tickrate calculation
+
+    struct RemotePlayerData {
+        glm::vec3 currentPos; // Where we are currently rendering
+        glm::vec3 targetPos;  // Where the last packet said the player is
+        glm::vec3 direction;
+    };
+    static std::map<uint64_t, RemotePlayerData> RemotePlayers;
+
+  private:
   private:
     Steam(); // Private constructor for singleton
     ~Steam();
