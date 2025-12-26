@@ -1,9 +1,60 @@
 ---
-Language: Cpp
+# Based on LLVM style with custom modifications
 BasedOnStyle: LLVM
-UseTab: Never
+
+# Indentation
 IndentWidth: 4
 TabWidth: 4
+UseTab: Never
+ColumnLimit: 80
+
+# Braces
 BreakBeforeBraces: Attach
-AllowShortIfStatementsOnASingleLine: false
----
+AllowShortBlocksOnASingleLine: Empty
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+
+# Enums - Keep each enumerator on its own line
+AllowShortEnumsOnASingleLine: false
+
+# Arrays/Initializers - Don't collapse them
+# Cpp11BracedListStyle: true
+# AlignArrayOfStructures: Left
+
+# Bin packing - Prevent collapsing parameters/arguments
+BinPackArguments: false
+BinPackParameters: false
+AllowAllArgumentsOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+
+# Alignment
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: None
+AlignConsecutiveDeclarations: None
+AlignOperands: Align
+
+# Pointer alignment
+PointerAlignment: Left
+ReferenceAlignment: Left
+
+# Namespaces
+CompactNamespaces: false
+FixNamespaceComments: true
+
+# Include sorting
+SortIncludes: CaseInsensitive
+IncludeBlocks: Preserve
+IncludeCategories:
+  - Regex:           '^".*\.hpp"'
+    Priority:        1
+  - Regex:           '^<.*\.h>'
+    Priority:        2
+  - Regex:           '^<.*>'
+    Priority:        3
+
+# Other
+IndentCaseLabels: true
+SpaceAfterCStyleCast: false
+SpaceBeforeParens: ControlStatements
+MaxEmptyLinesToKeep: 1

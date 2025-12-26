@@ -2,18 +2,22 @@
 #include "core/Input.hpp"
 
 Camera::Camera()
-    : Position(glm::vec3(0.0f, 0.0f, 3.0f)),
+    : Position(glm::vec3(7.0f, 9.0f, 22.0f)),
       WorldUp(glm::vec3(0.0f, 1.0f, 0.0f)), Yaw(-90.0f), Pitch(0.0f),
       MovementSpeed(2.5f), MouseSensitivity(0.1f), Zoom(45.0f) {
     updateCameraVectors();
 }
 
-glm::mat4 Camera::GetViewMatrix() {
+glm::mat4 Camera::GetViewMatrix() const {
     return glm::lookAt(Position, Position + Front, Up);
 }
 
-glm::mat4 Camera::GetProjectionMatrix(float width, float height) {
+glm::mat4 Camera::GetProjectionMatrix(float width, float height) const {
     return glm::perspective(glm::radians(Zoom), width / height, 0.1f, 1000.0f);
+}
+
+glm::vec3 Camera::GetPosition() const {
+    return Position;
 }
 
 void Camera::Update(float deltaTime) {

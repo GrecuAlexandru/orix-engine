@@ -8,8 +8,9 @@ class Camera {
     Camera();
 
     // Perspective / View Matrices
-    glm::mat4 GetViewMatrix();
-    glm::mat4 GetProjectionMatrix(float width, float height);
+    glm::mat4 GetViewMatrix() const;
+    glm::mat4 GetProjectionMatrix(float width, float height) const;
+    glm::vec3 GetPosition() const;
 
     // High-level update functions
     void Update(float deltaTime);

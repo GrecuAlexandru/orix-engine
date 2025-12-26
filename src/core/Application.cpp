@@ -1,20 +1,22 @@
 #include "core/Application.hpp"
+
 #include "core/Input.hpp"
+#include "game/World.hpp"
 #include "platform/Steam.hpp"
-#include "renderer/Mesh.hpp"
+
+#include <glm/gtc/type_ptr.hpp>
 
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_sdl2.h"
 
-#include <glm/gtc/type_ptr.hpp>
-#include <iostream>
-
 Application::Application()
     : m_Window(nullptr), m_GLContext(nullptr), m_Running(true),
-      m_IsMouseLocked(false), m_LastFrame(0.0f), m_VAO(0), m_VBO(0) {}
+      m_IsMouseLocked(false), m_LastFrame(0.0f) {}
 
-Application::~Application() { Cleanup(); }
+Application::~Application() {
+    Cleanup();
+}
 
 bool Application::Initialize() {
     if (!Steam::Init())
@@ -27,10 +29,12 @@ bool Application::Initialize() {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
                         SDL_GL_CONTEXT_PROFILE_CORE);
 
-    m_Window =
-        SDL_CreateWindow("Orix Engine", SDL_WINDOWPOS_CENTERED,
-                         SDL_WINDOWPOS_CENTERED, m_WindowWidth, m_WindowHeight,
-                         SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    m_Window = SDL_CreateWindow("Orix Engine",
+                                SDL_WINDOWPOS_CENTERED,
+                                SDL_WINDOWPOS_CENTERED,
+                                m_WindowWidth,
+                                m_WindowHeight,
+                                SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     m_GLContext = SDL_GL_CreateContext(m_Window);
 
     if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress))
@@ -49,16 +53,8 @@ bool Application::Initialize() {
     m_BasicShader =
         std::make_unique<Shader>("shaders/basic.vert", "shaders/basic.frag");
 
-    // Setup Cube
-    glGenVertexArrays(1, &m_VAO);
-    glGenBuffers(1, &m_VBO);
-    glBindVertexArray(m_VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices,
-                 GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float),
-                          (void *)0);
-    glEnableVertexAttribArray(0);
+    // Initialize World
+    m_World.Init();
 
     return true;
 }
@@ -114,25 +110,23 @@ void Application::Render() {
     glClearColor(0.5f, 0.8f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    m_BasicShader->Use();
-    glm::mat4 model = glm::mat4(1.0f);
-    glm::mat4 view = m_Camera.GetViewMatrix();
-    glm::mat4 projection = m_Camera.GetProjectionMatrix((float)m_WindowWidth,
-                                                        (float)m_WindowHeight);
-    m_BasicShader->SetMat4("u_MVP", projection * view * model);
-
-    glBindVertexArray(m_VAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+    // Render World
+    m_World.Render(*m_BasicShader, m_Camera, m_WindowWidth, m_WindowHeight);
 
     // UI
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-    ImGui::Begin("Debug", nullptr,
+    ImGui::Begin("Debug",
+                 nullptr,
                  ImGuiWindowFlags_AlwaysAutoResize |
                      ImGuiWindowFlags_NoBackground);
     ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+    ImGui::Text("Position: %.1f, %.1f, %.1f",
+                m_Camera.GetPosition().x,
+                m_Camera.GetPosition().y,
+                m_Camera.GetPosition().z);
     ImGui::End();
 
     ImGui::Render();
@@ -145,8 +139,6 @@ void Application::Cleanup() {
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
-    glDeleteVertexArrays(1, &m_VAO);
-    glDeleteBuffers(1, &m_VBO);
     SDL_GL_DeleteContext(m_GLContext);
     SDL_DestroyWindow(m_Window);
     SDL_Quit();
