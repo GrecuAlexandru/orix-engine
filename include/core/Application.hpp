@@ -41,4 +41,7 @@ class Application {
 
     // World
     World m_World;
+
+    // Steam lobby ID input
+    char m_LobbyIdInput[64] = "";
 };

@@ -70,6 +70,7 @@ int Application::Run() {
 
         ProcessEvents();
         Update(deltaTime);
+        Steam::Update(); // Process Steam callbacks
         Render();
     }
 
@@ -132,6 +133,45 @@ void Application::Render() {
                 m_Player.GetCamera().GetPosition().x,
                 m_Player.GetCamera().GetPosition().y,
                 m_Player.GetCamera().GetPosition().z);
+
+    if (ImGui::Button("Host Steam Lobby")) {
+        Steam::CreateLobby();
+    }
+
+    ImGui::SameLine();
+
+    if (ImGui::Button("Find & Join Lobby")) {
+        Steam::FindLobbies();
+    }
+
+    // Lobby ID input and join
+    ImGui::Separator();
+
+    // Show current lobby ID if in a lobby
+    CSteamID currentLobby = Steam::GetCurrentLobbyID();
+    if (currentLobby.IsValid()) {
+        ImGui::Text("Current Lobby ID: %llu", currentLobby.ConvertToUint64());
+        if (ImGui::Button("Copy Lobby ID")) {
+            SDL_SetClipboardText(
+                std::to_string(currentLobby.ConvertToUint64()).c_str());
+        }
+    }
+
+    ImGui::Text("Join by Lobby ID:");
+    ImGui::InputText("##LobbyID", m_LobbyIdInput, sizeof(m_LobbyIdInput));
+    ImGui::SameLine();
+    if (ImGui::Button("Join")) {
+        if (strlen(m_LobbyIdInput) > 0) {
+            // Convert string to uint64
+            uint64 lobbyId = std::stoull(m_LobbyIdInput);
+            CSteamID steamLobbyId(lobbyId);
+            Steam::JoinLobby(steamLobbyId);
+        }
+    }
+
+    if (!m_IsMouseLocked) {
+        ImGui::Text("Press ESC to return to game");
+    }
     // Draw Crosshair
     ImDrawList* drawList = ImGui::GetBackgroundDrawList();
     ImVec2 center = ImVec2(m_WindowWidth / 2.0f, m_WindowHeight / 2.0f);
