@@ -8,10 +8,14 @@ World::World() {}
 World::~World() {}
 
 void World::Init() {
-    // Create one test chunk at the origin
-    Chunk* initialChunk = new Chunk(glm::ivec3(0, 0, 0));
-    initialChunk->GenerateMesh();
-    m_Chunks[glm::ivec3(0, 0, 0)] = initialChunk;
+    for (int x = 0; x < 4; x++) {
+        for (int z = 0; z < 4; z++) {
+            glm::ivec3 chunkPos(x * CHUNK_SIZE, 0, z * CHUNK_SIZE);
+            Chunk* newChunk = new Chunk(chunkPos);
+            newChunk->GenerateMesh();
+            m_Chunks[chunkPos] = newChunk;
+        }
+    }
 }
 
 void World::Update(float deltaTime) {

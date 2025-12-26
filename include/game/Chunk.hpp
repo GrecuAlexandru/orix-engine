@@ -24,5 +24,8 @@ class Chunk {
     unsigned int m_VAO, m_VBO;
     int m_VertexCount;
 
-    void addFace(std::vector<float>& vertices, glm::vec3 pos, int faceIndex);
+    void addFace(std::vector<float>& vertices,
+                 glm::vec3 pos,
+                 int faceIndex,
+                 float blockID);
 };
