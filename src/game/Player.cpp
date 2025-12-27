@@ -11,6 +11,10 @@ void Player::Update(float deltaTime, World& world) {
 
 void Player::UpdateCameraRotation(float deltaTime) {
     m_Camera.Update(deltaTime);
+
+    // Sync player's yaw and pitch with camera's rotation
+    Yaw = m_Camera.Yaw;
+    Pitch = m_Camera.Pitch;
 }
 
 void Player::HandleMovement(float deltaTime, World& world) {
@@ -53,20 +57,31 @@ void Player::HandleMovement(float deltaTime, World& world) {
     // 4. Collision Detection (Simplified Voxel Collision)
     glm::vec3 nextPos = Position + Velocity * deltaTime;
 
-    // A simple "Feet Check": Look at the block below nextPos
-    // We convert the float position to integer block coordinates
+    // Check the block BELOW the player's feet (subtract small offset to check
+    // the block we're standing on)
     int bx = (int)floor(nextPos.x);
-    int by = (int)floor(nextPos.y); // Floor level
+    int by = (int)floor(nextPos.y - 0.1f); // Check the block below our feet
     int bz = (int)floor(nextPos.z);
 
-    // Check the block at our feet
-    if (world.GetBlockAt(bx, by, bz).type != BlockType::Air) {
-        // We hit the ground!
-        Velocity.y = 0;
-        IsGrounded = true;
-        // Keep the player on top of the block
-        Position.y = (float)by + 1.0f;
+    // Check if there's a solid block below us
+    Block blockBelow = world.GetBlockAt(bx, by, bz);
+
+    if (blockBelow.type != BlockType::Air) {
+        // There's a solid block below us
+        float blockTopY = (float)by + 1.0f; // Top surface of the block
+
+        if (nextPos.y <= blockTopY) {
+            // We've hit or penetrated the ground
+            Position.y = blockTopY;
+            Velocity.y = 0;
+            IsGrounded = true;
+        } else {
+            // Still above the block, keep falling
+            Position.y = nextPos.y;
+            IsGrounded = false;
+        }
     } else {
+        // No solid block below, we're in the air
         IsGrounded = false;
         Position.y = nextPos.y;
     }

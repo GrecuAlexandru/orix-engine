@@ -21,7 +21,7 @@ class Steam {
     static std::string GetUserName(CSteamID userSteamID);
 
     // === Networking ===
-    static void SendPosition(glm::vec3 pos, glm::vec3 direction);
+    static void SendPosition(glm::vec3 pos, float yaw, float pitch);
     static void ReceivePackets();
     static void InterpolatePlayers(float deltaTime);
     static int GetPing(uint64_t targetID);

@@ -11,7 +11,8 @@ struct PlayerPositionPacket {
     PacketType type = PacketType::PlayerPosition;
     uint64_t steamID;
     float x, y, z;
-    float dirX, dirY, dirZ;
+    float bodyYaw;
+    float headPitch;
 };
 #pragma pack(pop)
 
@@ -19,5 +20,6 @@ struct PlayerPositionPacket {
 struct RemotePlayerData {
     glm::vec3 currentPos; // Smoothly interpolated position
     glm::vec3 targetPos;  // Latest received position
-    glm::vec3 direction;  // Player facing direction
+    float yaw;
+    float pitch;
 };

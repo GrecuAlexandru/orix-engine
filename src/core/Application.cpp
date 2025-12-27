@@ -114,11 +114,11 @@ void Application::Update(float deltaTime) {
     }
 
     static float networkTimer = 0.0f;
-    const float tickInterval = 1.0f / 30.0f; // 30Hz
+    const float tickInterval = 1.0f / m_NetworkTickrate;
 
     networkTimer += deltaTime;
     if (networkTimer >= tickInterval) {
-        Steam::SendPosition(m_Player.Position, m_Player.GetCamera().Front);
+        Steam::SendPosition(m_Player.Position, m_Player.Yaw, m_Player.Pitch);
         networkTimer = 0.0f;
     }
 }
@@ -221,9 +221,33 @@ void Application::RenderUI() {
     ImGui::Text("Incoming Tickrate: %d Hz", displayTickrate);
     ImGui::Separator();
 
+    // Local Player Info
+    ImGui::Text("Local Player:");
+    ImGui::Text("  Position: (%.2f, %.2f, %.2f)",
+                m_Player.Position.x,
+                m_Player.Position.y,
+                m_Player.Position.z);
+    ImGui::Text("  Yaw: %.2f, Pitch: %.2f", m_Player.Yaw, m_Player.Pitch);
+    ImGui::Separator();
+
+    // Remote Players Info
+    ImGui::Text("Remote Players: %d", (int)Steam::RemotePlayers.size());
     for (auto const& [id, data] : Steam::RemotePlayers) {
         int ping = Steam::GetPing(id);
-        ImGui::Text("Player [%llu]: Ping %dms", id, ping);
+        std::string playerName = Steam::GetUserName(CSteamID(id));
+
+        ImGui::Text("Player: %s [%llu]", playerName.c_str(), id);
+        ImGui::Text("  Current Pos: (%.2f, %.2f, %.2f)",
+                    data.currentPos.x,
+                    data.currentPos.y,
+                    data.currentPos.z);
+        ImGui::Text("  Target Pos: (%.2f, %.2f, %.2f)",
+                    data.targetPos.x,
+                    data.targetPos.y,
+                    data.targetPos.z);
+        ImGui::Text("  Yaw: %.2f, Pitch: %.2f", data.yaw, data.pitch);
+        ImGui::Text("  Ping: %dms", ping);
+        ImGui::Separator();
     }
 
     ImGui::End();

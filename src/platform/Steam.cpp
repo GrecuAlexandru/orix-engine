@@ -170,7 +170,7 @@ void Steam::OnLobbyChatUpdate(LobbyChatUpdate_t* pCallback) {
     }
 }
 
-void Steam::SendPosition(glm::vec3 pos, glm::vec3 direction) {
+void Steam::SendPosition(glm::vec3 pos, float yaw, float pitch) {
     if (!m_CurrentLobbyID.IsValid())
         return;
 
@@ -179,9 +179,8 @@ void Steam::SendPosition(glm::vec3 pos, glm::vec3 direction) {
     packet.x = pos.x;
     packet.y = pos.y;
     packet.z = pos.z;
-    packet.dirX = direction.x;
-    packet.dirY = direction.y;
-    packet.dirZ = direction.z;
+    packet.bodyYaw = yaw;
+    packet.headPitch = pitch;
 
     int numMembers = SteamMatchmaking()->GetNumLobbyMembers(m_CurrentLobbyID);
     for (int i = 0; i < numMembers; i++) {
@@ -221,8 +220,10 @@ void Steam::ReceivePackets() {
                 // Update the TARGET position, not the current position
                 RemotePlayers[p->steamID].targetPos =
                     glm::vec3(p->x, p->y, p->z);
-                RemotePlayers[p->steamID].direction =
-                    glm::vec3(p->dirX, p->dirY, p->dirZ);
+
+                // Update rotation data
+                RemotePlayers[p->steamID].yaw = p->bodyYaw;
+                RemotePlayers[p->steamID].pitch = p->headPitch;
 
                 // Increment packet counter for tickrate calculation
                 s_PacketsReceivedThisSecond++;

@@ -42,28 +42,50 @@ void World::Render(Shader& shader,
         chunk->Render(shader);
     }
 
+    // Bind the player cube VAO for rendering remote players
+    glBindVertexArray(m_PlayerCubeVAO);
+
     // Render remote players
     for (auto const& [id, data] : Steam::RemotePlayers) {
-        // 1. Draw the Player Body (Cube) - using smooth interpolated position
-        glm::mat4 model = glm::translate(glm::mat4(1.0f), data.currentPos);
-        // Scale to player size (roughly 2 blocks tall, 1 block wide)
-        model = glm::scale(model, glm::vec3(0.8f, 1.8f, 0.8f));
-        shader.SetMat4("u_Model", model);
+        // Render body (rectangular box that rotates with yaw)
+        glm::mat4 bodyModel = glm::mat4(1.0f);
+        bodyModel = glm::translate(bodyModel, data.currentPos);
+        bodyModel = glm::translate(
+            bodyModel,
+            glm::vec3(0.0f, 0.6f, 0.0f)); // Lift body so bottom is at feet
+        bodyModel = glm::rotate(
+            bodyModel, glm::radians(-(data.yaw - 90.0f)), glm::vec3(0, 1, 0));
+        bodyModel = glm::scale(bodyModel, glm::vec3(0.6f, 1.2f, 0.4f));
 
-        glBindVertexArray(m_PlayerCubeVAO);
+        shader.SetMat4("u_Model", bodyModel);
+        shader.SetVec3("u_Color", glm::vec3(0.2f, 0.4f, 1.0f));
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
-        // 2. Draw a "Direction Indicator" (A smaller cube in front of the face)
-        glm::vec3 indicatorPos = data.currentPos + (data.direction * 0.4f);
-        glm::mat4 indicatorModel =
-            glm::translate(glm::mat4(1.0f), indicatorPos);
-        indicatorModel =
-            glm::scale(indicatorModel, glm::vec3(0.3f)); // Make it smaller
+        // Render head (cube positioned above body, rotates with yaw and tilts
+        // with pitch)
+        glm::mat4 headModel = glm::mat4(1.0f);
+        headModel = glm::translate(headModel, data.currentPos);
+        headModel = glm::translate(
+            headModel,
+            glm::vec3(
+                0.0f,
+                1.6f,
+                0.0f)); // Position head above body (body height 1.2 + 0.4)
+        headModel = glm::rotate(headModel,
+                                glm::radians(-(data.yaw - 90.0f)),
+                                glm::vec3(0, 1, 0)); // Rotate with body
+        headModel = glm::rotate(headModel,
+                                glm::radians(-data.pitch),
+                                glm::vec3(1, 0, 0)); // Tilt up/down
+        headModel = glm::scale(headModel, glm::vec3(0.4f, 0.4f, 0.4f));
 
-        shader.SetMat4("u_Model", indicatorModel);
-        glBindVertexArray(m_PlayerCubeVAO);
+        shader.SetMat4("u_Model", headModel);
+        shader.SetVec3("u_Color", glm::vec3(1.0f, 0.8f, 0.6f));
         glDrawArrays(GL_TRIANGLES, 0, 36);
     }
+
+    // Unbind VAO
+    glBindVertexArray(0);
 }
 
 Block World::GetBlockAt(int x, int y, int z) {

@@ -16,6 +16,8 @@ class Player {
     }
 
     glm::vec3 Position;
+    float Yaw = -90.0f;
+    float Pitch = 0.0f;
     glm::vec3 Velocity = glm::vec3(0.0f);
 
     bool IsGrounded = false;

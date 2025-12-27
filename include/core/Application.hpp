@@ -33,8 +33,8 @@ class Application {
     std::unique_ptr<Shader> m_BasicShader;
 
     // Window Constants
-    const int m_WindowWidth = 1280 / 2;
-    const int m_WindowHeight = 720 / 2;
+    const int m_WindowWidth = 871;
+    const int m_WindowHeight = 490;
 
     // World
     World m_World;
@@ -45,4 +45,6 @@ class Application {
 
     // Steam lobby ID input
     char m_LobbyIdInput[64] = "";
+
+    float m_NetworkTickrate = 30.0f;
 };
