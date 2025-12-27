@@ -1,6 +1,7 @@
 #include "platform/Steam.hpp"
 #include "game/network/NetworkPackets.hpp"
 #include <iostream>
+#include "steam/isteammatchmaking.h"
 #include "steam/steamnetworkingtypes.h"
 
 Steam::Steam() {
@@ -50,22 +51,7 @@ void Steam::Update() {
         }
     }
 
-    // Check if lobby match list is complete
-    if (m_LobbyMatchListCall != k_uAPICallInvalid) {
-        bool bFailed = false;
-        if (SteamUtils()->IsAPICallCompleted(m_LobbyMatchListCall, &bFailed)) {
-            LobbyMatchList_t callback;
-            bool bIOFailure = false;
-            if (SteamUtils()->GetAPICallResult(m_LobbyMatchListCall,
-                                               &callback,
-                                               sizeof(callback),
-                                               callback.k_iCallback,
-                                               &bIOFailure)) {
-                OnLobbyMatchList(&callback, bIOFailure);
-            }
-            m_LobbyMatchListCall = k_uAPICallInvalid;
-        }
-    }
+    // Lobby match list is now handled by CCallResult in FindFriendLobbies
 
     // Check if lobby enter is complete
     if (m_LobbyEnterCall != k_uAPICallInvalid) {
@@ -108,24 +94,6 @@ void Steam::FindLobbies() {
         k_ELobbyDistanceFilterWorldwide);
 
     m_LobbyMatchListCall = SteamMatchmaking()->RequestLobbyList();
-}
-
-void Steam::OnLobbyMatchList(LobbyMatchList_t* pCallback, bool bIOFailure) {
-    if (bIOFailure) {
-        std::cerr << "Steam: Failed to get lobby list." << std::endl;
-        return;
-    }
-
-    std::cout << "Steam: Found " << pCallback->m_nLobbiesMatching << " lobbies."
-              << std::endl;
-
-    if (pCallback->m_nLobbiesMatching > 0) {
-        // Join the first lobby found
-        CSteamID lobbyID = SteamMatchmaking()->GetLobbyByIndex(0);
-        JoinLobby(lobbyID);
-    } else {
-        std::cout << "Steam: No lobbies found." << std::endl;
-    }
 }
 
 void Steam::JoinLobby(CSteamID lobbyId) {
@@ -247,6 +215,8 @@ void Steam::InterpolatePlayers(float deltaTime) {
     for (auto& [id, data] : RemotePlayers) {
         // Move currentPos slightly toward targetPos
         data.currentPos = glm::mix(data.currentPos, data.targetPos, lerpFactor);
+        data.yaw = glm::mix(data.yaw, data.targetYaw, lerpFactor);
+        data.pitch = glm::mix(data.pitch, data.targetPitch, lerpFactor);
     }
 }
 
@@ -268,6 +238,39 @@ CSteamID Steam::GetCurrentLobbyID() {
 std::string Steam::GetUserName(CSteamID userSteamID) {
     // SteamFriends allows us to get the "Persona Name" of any user we can see
     return SteamFriends()->GetFriendPersonaName(userSteamID);
+}
+
+void Steam::FindFriendLobbies() {
+    FoundLobbies.clear();
+    std::cout << "Steam: Searching for friends' lobbies..." << std::endl;
+
+    SteamMatchmaking()->AddRequestLobbyListDistanceFilter(
+        k_ELobbyDistanceFilterWorldwide);
+
+    SteamAPICall_t hSteamAPICall = SteamMatchmaking()->RequestLobbyList();
+    GetInstance()->m_LobbyMatchListCallResult.Set(
+        hSteamAPICall, GetInstance(), &Steam::OnLobbyMatchList);
+}
+
+void Steam::OnLobbyMatchList(LobbyMatchList_t* pCallback, bool bIOFailure) {
+    if (bIOFailure)
+        return;
+
+    for (uint32 i = 0; i < pCallback->m_nLobbiesMatching; i++) {
+        CSteamID lobbyID = SteamMatchmaking()->GetLobbyByIndex(i);
+        CSteamID ownerID = SteamMatchmaking()->GetLobbyOwner(lobbyID);
+
+        // Check if the owner is a friend
+        if (SteamFriends()->GetFriendRelationship(ownerID) ==
+            k_EFriendRelationshipFriend) {
+            LobbyInfo info;
+            info.id = lobbyID;
+            info.hostName = SteamFriends()->GetFriendPersonaName(ownerID);
+            FoundLobbies.push_back(info);
+        }
+    }
+    std::cout << "Steam: Found " << FoundLobbies.size() << " friend lobbies."
+              << std::endl;
 }
 
 void Steam::Shutdown() {

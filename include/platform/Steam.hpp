@@ -6,6 +6,11 @@
 #include <map>
 #include <string>
 
+struct LobbyInfo {
+    CSteamID id;
+    std::string hostName;
+};
+
 class Steam {
   public:
     // === Initialization ===
@@ -16,9 +21,11 @@ class Steam {
     // === Lobby Management ===
     static void CreateLobby();
     static void FindLobbies();
+    static void FindFriendLobbies();
     static void JoinLobby(CSteamID lobbyId);
     static CSteamID GetCurrentLobbyID();
     static std::string GetUserName(CSteamID userSteamID);
+    inline static std::vector<LobbyInfo> FoundLobbies;
 
     // === Networking ===
     static void SendPosition(glm::vec3 pos, float yaw, float pitch);
@@ -39,9 +46,11 @@ class Steam {
 
     // Lobby callbacks
     static void OnLobbyCreated(LobbyCreated_t* pCallback, bool bIOFailure);
-    static void OnLobbyMatchList(LobbyMatchList_t* pCallback, bool bIOFailure);
+    void OnLobbyMatchList(LobbyMatchList_t* pCallback,
+                          bool bIOFailure); // Non-static for CCallResult
     static void OnLobbyEntered(LobbyEnter_t* pCallback, bool bIOFailure);
     STEAM_CALLBACK(Steam, OnLobbyChatUpdate, LobbyChatUpdate_t);
+    CCallResult<Steam, LobbyMatchList_t> m_LobbyMatchListCallResult;
 
     // State
     inline static SteamAPICall_t m_LobbyCreateCall = k_uAPICallInvalid;

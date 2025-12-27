@@ -8,12 +8,18 @@
 #include "game/World.hpp"
 #include "renderer/Shader.hpp"
 
+enum class GameState {
+    MainMenu,
+    InGame
+};
+
 class Application {
   public:
     Application();
     ~Application();
 
     int Run();
+    void EnterGame(); // Transition from menu to game
 
   private:
     bool Initialize();
@@ -22,6 +28,9 @@ class Application {
     void Render();
     void RenderUI();
     void Cleanup();
+
+    // Game State
+    GameState m_GameState = GameState::MainMenu;
 
     // Windowing
     SDL_Window* m_Window;

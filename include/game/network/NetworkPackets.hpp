@@ -22,4 +22,6 @@ struct RemotePlayerData {
     glm::vec3 targetPos;  // Latest received position
     float yaw;
     float pitch;
+    float targetYaw;
+    float targetPitch;
 };
