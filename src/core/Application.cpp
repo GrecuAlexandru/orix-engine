@@ -1,14 +1,15 @@
 #include "core/Application.hpp"
-
 #include "core/Input.hpp"
-#include "game/World.hpp"
 #include "platform/Steam.hpp"
+#include "states/MainMenuState.hpp"
+#include "states/PlayState.hpp"
 
-#include <glm/gtc/type_ptr.hpp>
+#include <iostream>
 
-#include "imgui.h"
-#include "imgui_impl_opengl3.h"
-#include "imgui_impl_sdl2.h"
+#ifdef _WIN32
+#include <windows.h>
+#undef GetUserName
+#endif
 
 Application::Application()
     : m_Window(nullptr), m_GLContext(nullptr), m_Running(true),
@@ -40,11 +41,14 @@ bool Application::Initialize() {
     if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress))
         return false;
 
-    // ImGui Init
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGui_ImplSDL2_InitForOpenGL(m_Window, m_GLContext);
-    ImGui_ImplOpenGL3_Init("#version 450");
+    // Initialize Managers
+    m_UIManager = std::make_unique<UIManager>();
+    if (!m_UIManager->Initialize(m_Window, m_WindowWidth, m_WindowHeight)) {
+        return false;
+    }
+
+    m_StateManager = std::make_unique<StateManager>(this);
+    m_StateManager->PushState(std::make_unique<MainMenuState>());
 
     glEnable(GL_DEPTH_TEST);
     Input::SetCursorLock(m_IsMouseLocked);
@@ -83,260 +87,58 @@ void Application::ProcessEvents() {
 
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
-        ImGui_ImplSDL2_ProcessEvent(&e);
+        m_UIManager->ProcessEvent(e, m_Window);
         if (e.type == SDL_QUIT)
             m_Running = false;
     }
 
     if (Input::IsKeyPressed(SDL_SCANCODE_ESCAPE)) {
-        m_IsMouseLocked = !m_IsMouseLocked;
-        Input::SetCursorLock(m_IsMouseLocked);
-    }
-
-    if (Input::IsMouseButtonPressed(SDL_BUTTON_LEFT) && !m_IsMouseLocked) {
-        if (!ImGui::GetIO().WantCaptureMouse) {
-            m_IsMouseLocked = true;
-            Input::SetCursorLock(m_IsMouseLocked);
-        }
+        // Toggle mouse lock or return to menu logic could go here
+        // For now, let's keep it simple or delegate to state
+        // m_IsMouseLocked = !m_IsMouseLocked;
+        // SetMouseLocked(m_IsMouseLocked);
     }
 }
 
 void Application::Update(float deltaTime) {
-    // Only update game logic if we're in-game
-    if (m_GameState != GameState::InGame)
-        return;
-
-    // Receive network packets and interpolate remote players
-    Steam::ReceivePackets();
-    Steam::InterpolatePlayers(deltaTime);
-
-    // Always update player physics and camera position
-    m_Player.Update(deltaTime, m_World);
-
-    if (m_IsMouseLocked) {
-        m_Player.UpdateCameraRotation(deltaTime);
+    if (m_PendingState) {
+        m_StateManager->ChangeState(std::move(m_PendingState));
     }
 
-    static float networkTimer = 0.0f;
-    const float tickInterval = 1.0f / m_NetworkTickrate;
-
-    networkTimer += deltaTime;
-    if (networkTimer >= tickInterval) {
-        Steam::SendPosition(m_Player.Position, m_Player.Yaw, m_Player.Pitch);
-        networkTimer = 0.0f;
-    }
+    m_UIManager->Update();
+    m_StateManager->Update(deltaTime);
 }
 
 void Application::Render() {
     glClearColor(0.5f, 0.8f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Only render world if we're in-game
-    if (m_GameState == GameState::InGame) {
-        m_World.Render(*m_BasicShader,
-                       m_Player.GetCamera(),
-                       m_WindowWidth,
-                       m_WindowHeight);
-    }
+    // Start ImGui frame BEFORE state render (state may use ImGui)
+    m_UIManager->BeginFrame();
 
-    // Always render UI
-    RenderUI();
+    // Render world/game content
+    m_StateManager->Render();
+
+    // Render RmlUi and finish ImGui
+    m_UIManager->Render();
+    m_UIManager->EndFrame();
 
     SDL_GL_SwapWindow(m_Window);
 }
 
 void Application::EnterGame() {
-    m_GameState = GameState::InGame;
-    m_IsMouseLocked = true;
-    Input::SetCursorLock(true);
+    m_PendingState = std::make_unique<PlayState>();
 }
 
-void Application::RenderUI() {
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplSDL2_NewFrame();
-    ImGui::NewFrame();
-
-    if (m_GameState == GameState::MainMenu) {
-        // Main Menu UI
-        ImGui::SetNextWindowPos(
-            ImVec2(m_WindowWidth / 2.0f, m_WindowHeight / 2.0f),
-            ImGuiCond_Always,
-            ImVec2(0.5f, 0.5f));
-        ImGui::SetNextWindowSize(ImVec2(400, 0), ImGuiCond_Always);
-
-        ImGui::Begin("Orix Engine - Main Menu",
-                     nullptr,
-                     ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
-
-        ImGui::Text("Welcome to Orix Engine!");
-        ImGui::Separator();
-        ImGui::Spacing();
-
-        ImGui::Text("Multiplayer:");
-
-        if (ImGui::Button("Host New Game", ImVec2(-1, 40))) {
-            Steam::CreateLobby();
-            EnterGame();
-        }
-
-        ImGui::Spacing();
-
-        if (ImGui::Button("Refresh Friend Lobbies", ImVec2(-1, 30))) {
-            Steam::FindFriendLobbies();
-        }
-
-        ImGui::Text("Available Lobbies:");
-        ImGui::BeginChild("LobbyList", ImVec2(0, 150), true);
-
-        if (Steam::FoundLobbies.empty()) {
-            ImGui::TextDisabled("No friends currently hosting...");
-            ImGui::TextDisabled("Click 'Refresh' to search for lobbies");
-        } else {
-            for (const auto& lobby : Steam::FoundLobbies) {
-                std::string label = "Join " + lobby.hostName + "'s Game";
-                if (ImGui::Selectable(label.c_str(), false, 0, ImVec2(0, 30))) {
-                    Steam::JoinLobby(lobby.id);
-                    EnterGame();
-                }
-            }
-        }
-        ImGui::EndChild();
-
-        ImGui::Separator();
-        ImGui::Text("Or join by Lobby ID:");
-        ImGui::InputText("##LobbyID", m_LobbyIdInput, sizeof(m_LobbyIdInput));
-        if (ImGui::Button("Join by ID", ImVec2(-1, 30))) {
-            if (strlen(m_LobbyIdInput) > 0) {
-                uint64 lobbyId = std::stoull(m_LobbyIdInput);
-                CSteamID steamLobbyId(lobbyId);
-                Steam::JoinLobby(steamLobbyId);
-                EnterGame();
-            }
-        }
-
-        ImGui::End();
-    } else {
-        // In-Game UI
-        // Debug Window
-        ImGui::Begin("Debug",
-                     nullptr,
-                     ImGuiWindowFlags_AlwaysAutoResize |
-                         ImGuiWindowFlags_NoBackground);
-        ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
-        ImGui::Text("Position: %.1f, %.1f, %.1f",
-                    m_Player.GetCamera().GetPosition().x,
-                    m_Player.GetCamera().GetPosition().y,
-                    m_Player.GetCamera().GetPosition().z);
-
-        if (ImGui::Button("Host Steam Lobby")) {
-            Steam::CreateLobby();
-        }
-
-        ImGui::SameLine();
-
-        if (ImGui::Button("Find & Join Lobby")) {
-            Steam::FindLobbies();
-        }
-
-        ImGui::Separator();
-
-        CSteamID currentLobby = Steam::GetCurrentLobbyID();
-        if (currentLobby.IsValid()) {
-            ImGui::Text("Current Lobby ID: %llu",
-                        currentLobby.ConvertToUint64());
-            if (ImGui::Button("Copy Lobby ID")) {
-                SDL_SetClipboardText(
-                    std::to_string(currentLobby.ConvertToUint64()).c_str());
-            }
-        }
-
-        ImGui::Text("Join by Lobby ID:");
-        ImGui::InputText("##LobbyID", m_LobbyIdInput, sizeof(m_LobbyIdInput));
-        ImGui::SameLine();
-        if (ImGui::Button("Join")) {
-            if (strlen(m_LobbyIdInput) > 0) {
-                uint64 lobbyId = std::stoull(m_LobbyIdInput);
-                CSteamID steamLobbyId(lobbyId);
-                Steam::JoinLobby(steamLobbyId);
-            }
-        }
-
-        if (!m_IsMouseLocked) {
-            ImGui::Text("Press ESC to return to game");
-        }
-
-        // Crosshair
-        ImDrawList* drawList = ImGui::GetBackgroundDrawList();
-        ImVec2 center = ImVec2(m_WindowWidth / 2.0f, m_WindowHeight / 2.0f);
-        float lineSize = 10.0f;
-        float thickness = 2.0f;
-        ImU32 white = IM_COL32(255, 255, 255, 255);
-
-        drawList->AddLine(ImVec2(center.x - lineSize, center.y),
-                          ImVec2(center.x + lineSize, center.y),
-                          white,
-                          thickness);
-        drawList->AddLine(ImVec2(center.x, center.y - lineSize),
-                          ImVec2(center.x, center.y + lineSize),
-                          white,
-                          thickness);
-        ImGui::End();
-
-        // Network Debug Window
-        ImGui::Begin("Network Debug");
-
-        static float timer = 0;
-        static int displayTickrate = 0;
-
-        timer += ImGui::GetIO().DeltaTime;
-        if (timer >= 1.0f) {
-            displayTickrate = Steam::GetAndResetPacketCount();
-            timer = 0;
-        }
-
-        ImGui::Text("Incoming Tickrate: %d Hz", displayTickrate);
-        ImGui::Separator();
-
-        // Local Player Info
-        ImGui::Text("Local Player:");
-        ImGui::Text("  Position: (%.2f, %.2f, %.2f)",
-                    m_Player.Position.x,
-                    m_Player.Position.y,
-                    m_Player.Position.z);
-        ImGui::Text("  Yaw: %.2f, Pitch: %.2f", m_Player.Yaw, m_Player.Pitch);
-        ImGui::Separator();
-
-        // Remote Players Info
-        ImGui::Text("Remote Players: %d", (int)Steam::RemotePlayers.size());
-        for (auto const& [id, data] : Steam::RemotePlayers) {
-            int ping = Steam::GetPing(id);
-            std::string playerName = Steam::GetUserName(CSteamID(id));
-
-            ImGui::Text("Player: %s [%llu]", playerName.c_str(), id);
-            ImGui::Text("  Current Pos: (%.2f, %.2f, %.2f)",
-                        data.currentPos.x,
-                        data.currentPos.y,
-                        data.currentPos.z);
-            ImGui::Text("  Target Pos: (%.2f, %.2f, %.2f)",
-                        data.targetPos.x,
-                        data.targetPos.y,
-                        data.targetPos.z);
-            ImGui::Text("  Yaw: %.2f, Pitch: %.2f", data.yaw, data.pitch);
-            ImGui::Text("  Ping: %dms", ping);
-            ImGui::Separator();
-        }
-
-        ImGui::End();
-    }
-
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+void Application::SetMouseLocked(bool locked) {
+    m_IsMouseLocked = locked;
+    Input::SetCursorLock(locked);
+    // SDL_SetRelativeMouseMode is handled in Input::SetCursorLock or should be
 }
 
 void Application::Cleanup() {
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplSDL2_Shutdown();
-    ImGui::DestroyContext();
+    m_StateManager = nullptr;
+    m_UIManager = nullptr;
     SDL_GL_DeleteContext(m_GLContext);
     SDL_DestroyWindow(m_Window);
     SDL_Quit();

@@ -4,9 +4,11 @@
 #include <SDL.h>
 #include <memory>
 
+#include "core/StateManager.hpp"
 #include "game/Player.hpp"
 #include "game/World.hpp"
 #include "renderer/Shader.hpp"
+#include "ui/UIManager.hpp"
 
 enum class GameState {
     MainMenu,
@@ -21,16 +23,55 @@ class Application {
     int Run();
     void EnterGame(); // Transition from menu to game
 
+    // Getters for States
+    World& GetWorld() {
+        return m_World;
+    }
+    Player& GetPlayer() {
+        return m_Player;
+    }
+    Shader& GetShader() {
+        return *m_BasicShader;
+    }
+    UIManager* GetUIManager() {
+        return m_UIManager.get();
+    }
+
+    int GetWidth() const {
+        return m_WindowWidth;
+    }
+    int GetHeight() const {
+        return m_WindowHeight;
+    }
+    float GetNetworkTickrate() const {
+        return m_NetworkTickrate;
+    }
+
+    bool IsMouseLocked() const {
+        return m_IsMouseLocked;
+    }
+    void SetMouseLocked(bool locked);
+
+    void PushState(std::unique_ptr<State> state) {
+        m_StateManager->PushState(std::move(state));
+    }
+    void ChangeState(std::unique_ptr<State> state) {
+        m_StateManager->ChangeState(std::move(state));
+    }
+
   private:
     bool Initialize();
     void ProcessEvents();
     void Update(float deltaTime);
     void Render();
-    void RenderUI();
     void Cleanup();
 
-    // Game State
-    GameState m_GameState = GameState::MainMenu;
+    // Managers
+    std::unique_ptr<StateManager> m_StateManager;
+    std::unique_ptr<UIManager> m_UIManager;
+
+    // Defer state changes to avoid crashing RmlUi during event processing
+    std::unique_ptr<State> m_PendingState;
 
     // Windowing
     SDL_Window* m_Window;

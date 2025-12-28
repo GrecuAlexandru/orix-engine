@@ -1,0 +1,48 @@
+/* Full screen layout */
+body {
+    font-family: "Press Start 2P"; /* Ensure you load this font in C++ */
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6); /* Dim the background world */
+    color: white;
+}
+
+#container {
+    width: 400px;
+    margin: 15% auto;
+    text-align: center;
+}
+
+h1 {
+    font-size: 48px;
+    margin-bottom: 50px;
+    color: #ffcc00; /* Gold title */
+    outline-font: 2px black;
+}
+
+.button-block {
+    display: block;
+}
+
+/* Minecraft-style button look */
+button {
+    display: block;
+    width: 300px;
+    height: 45px;
+    margin: 10px auto;
+    background-color: #444;
+    border: 2px #000;
+    font-size: 18px;
+    text-align: center;
+    line-height: 40px;
+}
+
+button:hover {
+    background-color: #666;
+    border-color: #fff;
+    cursor: pointer;
+}
+
+button:active {
+    background-color: #222;
+}

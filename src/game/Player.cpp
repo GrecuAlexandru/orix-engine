@@ -54,39 +54,127 @@ void Player::HandleMovement(float deltaTime, World& world) {
         IsGrounded = false;
     }
 
-    // 4. Collision Detection (Simplified Voxel Collision)
+    // 4. Collision Detection
     glm::vec3 nextPos = Position + Velocity * deltaTime;
 
-    // Check the block BELOW the player's feet (subtract small offset to check
-    // the block we're standing on)
-    int bx = (int)floor(nextPos.x);
-    int by = (int)floor(nextPos.y - 0.1f); // Check the block below our feet
-    int bz = (int)floor(nextPos.z);
+    // Player collision box parameters
+    const float playerWidth = 0.3f; // Half-width of player hitbox
+    const float stepHeight = 1.0f;  // Max height player can auto-step
 
-    // Check if there's a solid block below us
+    // Helper lambda to check if a position collides with solid blocks
+    auto collidesWithWorld = [&](float px, float py, float pz) -> bool {
+        // Check blocks at feet and head level
+        for (float yOffset = 0.0f; yOffset < Height; yOffset += 0.9f) {
+            int bx = (int)floor(px);
+            int by = (int)floor(py + yOffset);
+            int bz = (int)floor(pz);
+            Block block = world.GetBlockAt(bx, by, bz);
+            if (block.type != BlockType::Air) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    // 5. Horizontal Collision with Auto-Step
+    float newX = nextPos.x;
+    float newZ = nextPos.z;
+    float newY = Position.y;
+
+    // Try moving in X direction
+    if (Velocity.x != 0.0f) {
+        bool canMoveX = !collidesWithWorld(nextPos.x, Position.y, Position.z);
+
+        if (!canMoveX) {
+            // Check if we can step up
+            bool canStepX = !collidesWithWorld(
+                nextPos.x, Position.y + stepHeight, Position.z);
+            if (canStepX && IsGrounded) {
+                // Find the block height we need to step onto
+                int blockX = (int)floor(nextPos.x);
+                int blockZ = (int)floor(Position.z);
+                for (int checkY = (int)floor(Position.y);
+                     checkY <= (int)floor(Position.y + stepHeight);
+                     checkY++) {
+                    Block b = world.GetBlockAt(blockX, checkY, blockZ);
+                    if (b.type != BlockType::Air) {
+                        newY = (float)(checkY + 1);
+                        canMoveX = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (canMoveX) {
+            newX = nextPos.x;
+        } else {
+            newX = Position.x;
+            Velocity.x = 0;
+        }
+    }
+
+    // Try moving in Z direction
+    if (Velocity.z != 0.0f) {
+        bool canMoveZ = !collidesWithWorld(newX, Position.y, nextPos.z);
+
+        if (!canMoveZ) {
+            // Check if we can step up
+            bool canStepZ =
+                !collidesWithWorld(newX, Position.y + stepHeight, nextPos.z);
+            if (canStepZ && IsGrounded) {
+                // Find the block height we need to step onto
+                int blockX = (int)floor(newX);
+                int blockZ = (int)floor(nextPos.z);
+                for (int checkY = (int)floor(Position.y);
+                     checkY <= (int)floor(Position.y + stepHeight);
+                     checkY++) {
+                    Block b = world.GetBlockAt(blockX, checkY, blockZ);
+                    if (b.type != BlockType::Air) {
+                        newY = (float)(checkY + 1);
+                        canMoveZ = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (canMoveZ) {
+            newZ = nextPos.z;
+        } else {
+            newZ = Position.z;
+            Velocity.z = 0;
+        }
+    }
+
+    Position.x = newX;
+    Position.z = newZ;
+    if (newY > Position.y) {
+        Position.y = newY; // Apply step-up
+    }
+
+    // 6. Vertical Collision (Ground Check)
+    nextPos.y = Position.y + Velocity.y * deltaTime;
+
+    int bx = (int)floor(Position.x);
+    int by = (int)floor(nextPos.y - 0.1f);
+    int bz = (int)floor(Position.z);
+
     Block blockBelow = world.GetBlockAt(bx, by, bz);
 
     if (blockBelow.type != BlockType::Air) {
-        // There's a solid block below us
-        float blockTopY = (float)by + 1.0f; // Top surface of the block
+        float blockTopY = (float)by + 1.0f;
 
         if (nextPos.y <= blockTopY) {
-            // We've hit or penetrated the ground
             Position.y = blockTopY;
             Velocity.y = 0;
             IsGrounded = true;
         } else {
-            // Still above the block, keep falling
             Position.y = nextPos.y;
             IsGrounded = false;
         }
     } else {
-        // No solid block below, we're in the air
         IsGrounded = false;
         Position.y = nextPos.y;
     }
-
-    // Apply horizontal movement (ignoring wall collisions for now)
-    Position.x = nextPos.x;
-    Position.z = nextPos.z;
 }

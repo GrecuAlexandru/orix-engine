@@ -1,0 +1,16 @@
+<rml>
+<head>
+    <title>Main Menu</title>
+    <link type="text/rcss" href="style.rcss"/>
+</head>
+<body class="main-menu">
+    <div id="container">
+        <h1>ORIX ENGINE</h1>
+        <div class="button-block">
+            <button id="host">HOST LOBBY</button>
+            <button id="join">JOIN A GAME</button>
+            <button id="exit">QUIT GAME</button>
+        </div>
+    </div>
+</body>
+</rml>

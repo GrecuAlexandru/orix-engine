@@ -1,0 +1,16 @@
+<rml>
+<head>
+    <title>Lobby Browser</title>
+    <link type="text/rcss" href="style.rcss"/>
+</head>
+<body>
+    <div id="menu-container">
+        <h1>Join a Game</h1>
+        <p>Available Lobbies:</p>
+        <div id="lobby-list">
+            <!-- Lobbies will be populated dynamically -->
+        </div>
+        <button id="back">BACK TO MENU</button>
+    </div>
+</body>
+</rml>

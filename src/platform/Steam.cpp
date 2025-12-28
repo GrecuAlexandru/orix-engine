@@ -73,7 +73,9 @@ void Steam::Update() {
 
 void Steam::CreateLobby() {
     std::cout << "Steam: Requesting Lobby Creation..." << std::endl;
-    m_LobbyCreateCall = SteamMatchmaking()->CreateLobby(k_ELobbyTypePublic, 4);
+    // Use FriendsOnly type so friends can discover the lobby
+    m_LobbyCreateCall =
+        SteamMatchmaking()->CreateLobby(k_ELobbyTypeFriendsOnly, 4);
 }
 
 void Steam::OnLobbyCreated(LobbyCreated_t* pCallback, bool bIOFailure) {
@@ -82,6 +84,12 @@ void Steam::OnLobbyCreated(LobbyCreated_t* pCallback, bool bIOFailure) {
         return;
     }
     m_CurrentLobbyID = pCallback->m_ulSteamIDLobby;
+
+    // Set lobby metadata to identify our game
+    SteamMatchmaking()->SetLobbyData(
+        m_CurrentLobbyID, "game_id", "orix_engine");
+    SteamMatchmaking()->SetLobbyData(m_CurrentLobbyID, "version", "1.0");
+
     std::cout << "Steam: Lobby Created! ID: " << pCallback->m_ulSteamIDLobby
               << std::endl;
 }
@@ -244,30 +252,66 @@ void Steam::FindFriendLobbies() {
     FoundLobbies.clear();
     std::cout << "Steam: Searching for friends' lobbies..." << std::endl;
 
-    SteamMatchmaking()->AddRequestLobbyListDistanceFilter(
-        k_ELobbyDistanceFilterWorldwide);
+    // Use Friends API to find friends who are in lobbies
+    int friendCount = SteamFriends()->GetFriendCount(k_EFriendFlagImmediate);
+    std::cout << "Steam: Checking " << friendCount << " friends..."
+              << std::endl;
 
-    SteamAPICall_t hSteamAPICall = SteamMatchmaking()->RequestLobbyList();
-    GetInstance()->m_LobbyMatchListCallResult.Set(
-        hSteamAPICall, GetInstance(), &Steam::OnLobbyMatchList);
+    for (int i = 0; i < friendCount; i++) {
+        CSteamID friendID =
+            SteamFriends()->GetFriendByIndex(i, k_EFriendFlagImmediate);
+        FriendGameInfo_t gameInfo;
+
+        if (SteamFriends()->GetFriendGamePlayed(friendID, &gameInfo)) {
+            // Check if friend is in a lobby
+            if (gameInfo.m_steamIDLobby.IsValid()) {
+                std::cout << "  Friend "
+                          << SteamFriends()->GetFriendPersonaName(friendID)
+                          << " is in lobby "
+                          << gameInfo.m_steamIDLobby.ConvertToUint64()
+                          << std::endl;
+
+                LobbyInfo info;
+                info.id = gameInfo.m_steamIDLobby;
+                info.hostName = SteamFriends()->GetFriendPersonaName(friendID);
+                FoundLobbies.push_back(info);
+            }
+        }
+    }
+
+    std::cout << "Steam: Found " << FoundLobbies.size() << " friend lobbies."
+              << std::endl;
 }
 
 void Steam::OnLobbyMatchList(LobbyMatchList_t* pCallback, bool bIOFailure) {
-    if (bIOFailure)
+    if (bIOFailure) {
+        std::cout << "Steam: Lobby search failed (IO Failure)" << std::endl;
         return;
+    }
+
+    std::cout << "Steam: Total lobbies found: " << pCallback->m_nLobbiesMatching
+              << std::endl;
 
     for (uint32 i = 0; i < pCallback->m_nLobbiesMatching; i++) {
         CSteamID lobbyID = SteamMatchmaking()->GetLobbyByIndex(i);
         CSteamID ownerID = SteamMatchmaking()->GetLobbyOwner(lobbyID);
 
+        std::cout << "  Lobby " << i << ": ID=" << lobbyID.ConvertToUint64()
+                  << ", Owner=" << ownerID.ConvertToUint64();
+
         // Check if the owner is a friend
-        if (SteamFriends()->GetFriendRelationship(ownerID) ==
-            k_EFriendRelationshipFriend) {
+        EFriendRelationship relationship =
+            SteamFriends()->GetFriendRelationship(ownerID);
+        std::cout << ", Relationship=" << relationship;
+
+        if (relationship == k_EFriendRelationshipFriend) {
             LobbyInfo info;
             info.id = lobbyID;
             info.hostName = SteamFriends()->GetFriendPersonaName(ownerID);
             FoundLobbies.push_back(info);
+            std::cout << " [FRIEND - ADDED]";
         }
+        std::cout << std::endl;
     }
     std::cout << "Steam: Found " << FoundLobbies.size() << " friend lobbies."
               << std::endl;
